@@ -1068,7 +1068,7 @@
                 setEditingExpense(expense);
                 setNewExpense({
                     description: expense.description,
-                    cost: expense.cost,
+                    cost: String(expense.cost),
                     date: expense.date,
                     isQuickOption: false
                 });
