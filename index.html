@@ -573,6 +573,19 @@
                                             <span className="text-gray-600">KM:</span>
                                             <span className="font-medium">{parseInt(vehicle.km || 0).toLocaleString('it-IT')}</span>
                                         </div>
+                                        {vehicle.fuelType && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">Alimentazione:</span>
+                                                <span className="font-medium text-green-600">
+                                                    {vehicle.fuelType === 'benzina' && '⛽ Benzina'}
+                                                    {vehicle.fuelType === 'diesel' && '🚛 Diesel'}
+                                                    {vehicle.fuelType === 'benzina-metano' && '⛽🔵 Benzina/Metano'}
+                                                    {vehicle.fuelType === 'benzina-gpl' && '⛽🟠 Benzina/GPL'}
+                                                    {vehicle.fuelType === 'hybrid' && '🔋 Hybrid'}
+                                                    {vehicle.fuelType === 'elettrico' && '⚡ Elettrico'}
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between text-sm">
                                             <span className="text-gray-600">Regime:</span>
                                             <span className={`font-medium ${vehicle.taxRegime === 'margine' ? 'text-purple-600' : 'text-blue-600'}`}>
@@ -606,36 +619,16 @@
                                                 </span>
                                             )}
                                         </div>
-                                        
-                                        {/* Financial Summary - Always visible */}
-                                        <div className="pt-3 border-t bg-gradient-to-r from-slate-50 to-blue-50 -mx-4 -mb-4 p-4 mt-3">
-                                            <p className="text-xs font-semibold text-gray-500 mb-2">RIEPILOGO FINANZIARIO</p>
-                                            <div className="space-y-1 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Costo Totale:</span>
-                                                    <span className="font-bold text-red-600">
-                                                        €{((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                                        {vehicle.sold && (
+                                            <div className="pt-3 border-t">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-sm text-gray-600">Margine:</span>
+                                                    <span className={`font-bold text-lg ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        €{calculateMargin(vehicle).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                                                     </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Prezzo Vendita:</span>
-                                                    <span className="font-bold text-blue-600">
-                                                        €{(parseFloat(vehicle.salePrice) || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center pt-1 border-t">
-                                                    <span className="font-bold text-gray-700">Margine:</span>
-                                                    <div className="text-right">
-                                                        <span className={`font-bold text-base ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            €{calculateMargin(vehicle).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
-                                                        </span>
-                                                        <p className={`text-xs ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            ({((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) > 0 ? (calculateMargin(vehicle) / ((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) * 100).toFixed(1) : 0}%)
-                                                        </p>
-                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -653,6 +646,7 @@
                 plate: '',
                 vin: '',
                 km: '',
+                fuelType: 'benzina',
                 taxRegime: 'margine',
                 purchasePrice: '',
                 salePrice: '',
@@ -839,6 +833,21 @@
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Alimentazione *</label>
+                                    <select
+                                        value={formData.fuelType}
+                                        onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="benzina">Benzina</option>
+                                        <option value="diesel">Diesel</option>
+                                        <option value="benzina-metano">Benzina/Metano</option>
+                                        <option value="benzina-gpl">Benzina/GPL</option>
+                                        <option value="hybrid">Hybrid</option>
+                                        <option value="elettrico">Elettrico</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Regime Fiscale *</label>
                                     <select
                                         value={formData.taxRegime}
@@ -1023,7 +1032,6 @@
         // Continue with VehicleDetail component...
         function VehicleDetail({ vehicle, onClose, onEdit, onDelete, onAddExpense, onDeleteExpense, onUpdate }) {
             const [showExpenseForm, setShowExpenseForm] = useState(false);
-            const [editingExpense, setEditingExpense] = useState(null);
             const [newExpense, setNewExpense] = useState({ 
                 description: '', 
                 cost: '', 
@@ -1046,39 +1054,10 @@
 
             const handleAddExpense = () => {
                 if (newExpense.description && newExpense.cost) {
-                    if (editingExpense) {
-                        // Update existing expense
-                        const updatedExpenses = vehicle.expenses.map(e => 
-                            e.id === editingExpense.id 
-                                ? { ...e, description: newExpense.description, cost: newExpense.cost, date: newExpense.date }
-                                : e
-                        );
-                        onUpdate(vehicle.id, { expenses: updatedExpenses });
-                        setEditingExpense(null);
-                    } else {
-                        // Add new expense
-                        onAddExpense(vehicle.id, newExpense);
-                    }
+                    onAddExpense(vehicle.id, newExpense);
                     setNewExpense({ description: '', cost: '', date: new Date().toISOString().split('T')[0], isQuickOption: false });
                     setShowExpenseForm(false);
                 }
-            };
-
-            const handleEditExpense = (expense) => {
-                setEditingExpense(expense);
-                setNewExpense({
-                    description: expense.description,
-                    cost: String(expense.cost),
-                    date: expense.date,
-                    isQuickOption: false
-                });
-                setShowExpenseForm(true);
-            };
-
-            const handleCancelExpense = () => {
-                setEditingExpense(null);
-                setNewExpense({ description: '', cost: '', date: new Date().toISOString().split('T')[0], isQuickOption: false });
-                setShowExpenseForm(false);
             };
 
             const addQuickExpense = (description, defaultCost = '') => {
@@ -1237,11 +1216,24 @@
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Chilometri</p>
                                     <p className="font-bold text-lg">{parseInt(vehicle.km || 0).toLocaleString('it-IT')} km</p>
                                 </div>
+                                {vehicle.fuelType && (
+                                    <div className="bg-gray-50 p-4 rounded-lg">
+                                        <p className="text-sm text-gray-600 mb-1">Alimentazione</p>
+                                        <p className="font-bold text-lg text-green-600">
+                                            {vehicle.fuelType === 'benzina' && '⛽ Benzina'}
+                                            {vehicle.fuelType === 'diesel' && '🚛 Diesel'}
+                                            {vehicle.fuelType === 'benzina-metano' && '⛽🔵 Metano'}
+                                            {vehicle.fuelType === 'benzina-gpl' && '⛽🟠 GPL'}
+                                            {vehicle.fuelType === 'hybrid' && '🔋 Hybrid'}
+                                            {vehicle.fuelType === 'elettrico' && '⚡ Elettrico'}
+                                        </p>
+                                    </div>
+                                )}
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Regime Fiscale</p>
                                     <p className="font-bold text-lg">{vehicle.taxRegime === 'margine' ? 'Margine' : 'IVA Esposta'}</p>
@@ -1322,14 +1314,6 @@
 
                                 {showExpenseForm && (
                                     <div className="bg-gray-50 p-4 rounded-lg mb-4 space-y-3">
-                                        {editingExpense && (
-                                            <div className="bg-blue-100 border-l-4 border-blue-500 p-3 mb-3">
-                                                <p className="text-sm font-medium text-blue-800">
-                                                    <i className="fas fa-edit mr-2"></i>
-                                                    Modifica spesa
-                                                </p>
-                                            </div>
-                                        )}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             <input
                                                 type="text"
@@ -1355,10 +1339,8 @@
                                             />
                                         </div>
                                         <div className="flex justify-end space-x-2">
-                                            <button onClick={handleCancelExpense} className="px-4 py-2 bg-gray-200 rounded-lg">Annulla</button>
-                                            <button onClick={handleAddExpense} className="px-4 py-2 bg-green-600 text-white rounded-lg">
-                                                {editingExpense ? 'Aggiorna' : 'Salva'}
-                                            </button>
+                                            <button onClick={() => setShowExpenseForm(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Annulla</button>
+                                            <button onClick={handleAddExpense} className="px-4 py-2 bg-green-600 text-white rounded-lg">Salva</button>
                                         </div>
                                     </div>
                                 )}
@@ -1375,18 +1357,7 @@
                                                 </div>
                                                 <div className="flex items-center space-x-3">
                                                     <span className="font-bold text-orange-600">€{parseFloat(exp.cost).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</span>
-                                                    <button 
-                                                        onClick={() => handleEditExpense(exp)} 
-                                                        className="text-blue-600 hover:text-blue-800"
-                                                        title="Modifica"
-                                                    >
-                                                        <i className="fas fa-edit"></i>
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => onDeleteExpense(vehicle.id, exp.id)} 
-                                                        className="text-red-600 hover:text-red-800"
-                                                        title="Elimina"
-                                                    >
+                                                    <button onClick={() => onDeleteExpense(vehicle.id, exp.id)} className="text-red-600 hover:text-red-800">
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </div>
