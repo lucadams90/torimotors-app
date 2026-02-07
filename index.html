@@ -1023,6 +1023,7 @@
         // Continue with VehicleDetail component...
         function VehicleDetail({ vehicle, onClose, onEdit, onDelete, onAddExpense, onDeleteExpense, onUpdate }) {
             const [showExpenseForm, setShowExpenseForm] = useState(false);
+            const [editingExpense, setEditingExpense] = useState(null);
             const [newExpense, setNewExpense] = useState({ 
                 description: '', 
                 cost: '', 
@@ -1045,10 +1046,39 @@
 
             const handleAddExpense = () => {
                 if (newExpense.description && newExpense.cost) {
-                    onAddExpense(vehicle.id, newExpense);
+                    if (editingExpense) {
+                        // Update existing expense
+                        const updatedExpenses = vehicle.expenses.map(e => 
+                            e.id === editingExpense.id 
+                                ? { ...e, description: newExpense.description, cost: newExpense.cost, date: newExpense.date }
+                                : e
+                        );
+                        onUpdate(vehicle.id, { expenses: updatedExpenses });
+                        setEditingExpense(null);
+                    } else {
+                        // Add new expense
+                        onAddExpense(vehicle.id, newExpense);
+                    }
                     setNewExpense({ description: '', cost: '', date: new Date().toISOString().split('T')[0], isQuickOption: false });
                     setShowExpenseForm(false);
                 }
+            };
+
+            const handleEditExpense = (expense) => {
+                setEditingExpense(expense);
+                setNewExpense({
+                    description: expense.description,
+                    cost: expense.cost,
+                    date: expense.date,
+                    isQuickOption: false
+                });
+                setShowExpenseForm(true);
+            };
+
+            const handleCancelExpense = () => {
+                setEditingExpense(null);
+                setNewExpense({ description: '', cost: '', date: new Date().toISOString().split('T')[0], isQuickOption: false });
+                setShowExpenseForm(false);
             };
 
             const addQuickExpense = (description, defaultCost = '') => {
@@ -1292,6 +1322,14 @@
 
                                 {showExpenseForm && (
                                     <div className="bg-gray-50 p-4 rounded-lg mb-4 space-y-3">
+                                        {editingExpense && (
+                                            <div className="bg-blue-100 border-l-4 border-blue-500 p-3 mb-3">
+                                                <p className="text-sm font-medium text-blue-800">
+                                                    <i className="fas fa-edit mr-2"></i>
+                                                    Modifica spesa
+                                                </p>
+                                            </div>
+                                        )}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                             <input
                                                 type="text"
@@ -1317,8 +1355,10 @@
                                             />
                                         </div>
                                         <div className="flex justify-end space-x-2">
-                                            <button onClick={() => setShowExpenseForm(false)} className="px-4 py-2 bg-gray-200 rounded-lg">Annulla</button>
-                                            <button onClick={handleAddExpense} className="px-4 py-2 bg-green-600 text-white rounded-lg">Salva</button>
+                                            <button onClick={handleCancelExpense} className="px-4 py-2 bg-gray-200 rounded-lg">Annulla</button>
+                                            <button onClick={handleAddExpense} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+                                                {editingExpense ? 'Aggiorna' : 'Salva'}
+                                            </button>
                                         </div>
                                     </div>
                                 )}
@@ -1335,7 +1375,18 @@
                                                 </div>
                                                 <div className="flex items-center space-x-3">
                                                     <span className="font-bold text-orange-600">€{parseFloat(exp.cost).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</span>
-                                                    <button onClick={() => onDeleteExpense(vehicle.id, exp.id)} className="text-red-600 hover:text-red-800">
+                                                    <button 
+                                                        onClick={() => handleEditExpense(exp)} 
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                        title="Modifica"
+                                                    >
+                                                        <i className="fas fa-edit"></i>
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => onDeleteExpense(vehicle.id, exp.id)} 
+                                                        className="text-red-600 hover:text-red-800"
+                                                        title="Elimina"
+                                                    >
                                                         <i className="fas fa-trash"></i>
                                                     </button>
                                                 </div>
