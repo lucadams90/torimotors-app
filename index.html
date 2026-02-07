@@ -483,9 +483,9 @@
                     v.plate?.toLowerCase().includes(searchQuery.toLowerCase());
 
                 const matchesFilter = filterStatus === 'all' ||
-                    (filterStatus === 'da-trasportare' && !v.transportOrdered && !v.inStock) ||
+                    (filterStatus === 'da-trasportare' && !v.transportOrdered && !v.inStock && !v.sold) ||
                     (filterStatus === 'in-stock' && v.inStock && !v.sold) ||
-                    (filterStatus === 'in-arrivo' && v.transportOrdered && !v.delivered) ||
+                    (filterStatus === 'in-arrivo' && v.transportOrdered && !v.delivered && !v.sold) ||
                     (filterStatus === 'disponibili' && (v.delivered || v.inStock) && !v.sold) ||
                     (filterStatus === 'vendute' && v.sold);
 
@@ -578,9 +578,9 @@
                         <div className="flex flex-wrap gap-2">
                             {[
                                 { id: 'all', label: 'Tutte', count: vehicles.length },
-                                { id: 'da-trasportare', label: 'Da Trasportare', count: vehicles.filter(v => !v.transportOrdered && !v.inStock).length },
+                                { id: 'da-trasportare', label: 'Da Trasportare', count: vehicles.filter(v => !v.transportOrdered && !v.inStock && !v.sold).length },
                                 { id: 'in-stock', label: 'In Stock', count: vehicles.filter(v => v.inStock && !v.sold).length },
-                                { id: 'in-arrivo', label: 'In Arrivo', count: vehicles.filter(v => v.transportOrdered && !v.delivered).length },
+                                { id: 'in-arrivo', label: 'In Arrivo', count: vehicles.filter(v => v.transportOrdered && !v.delivered && !v.sold).length },
                                 { id: 'disponibili', label: 'Disponibili', count: vehicles.filter(v => (v.delivered || v.inStock) && !v.sold).length },
                                 { id: 'vendute', label: 'Vendute', count: vehicles.filter(v => v.sold).length }
                             ].map(filter => (
