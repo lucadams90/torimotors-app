@@ -918,7 +918,7 @@
                                     <select
                                         value={formData.fuelType}
                                         onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
                                     >
                                         <option value="benzina">Benzina</option>
                                         <option value="diesel">Diesel</option>
@@ -933,7 +933,7 @@
                                     <select
                                         value={formData.taxRegime}
                                         onChange={(e) => setFormData({ ...formData, taxRegime: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
                                     >
                                         <option value="margine">Regime del Margine</option>
                                         <option value="iva">IVA Esposta (Netto)</option>
@@ -1016,14 +1016,17 @@
                                             />
                                         </div>
                                     )}
-                                    <label className="flex items-center space-x-3 cursor-pointer">
+                                    <label className="flex items-center space-x-3 cursor-pointer p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
                                         <input
                                             type="checkbox"
                                             checked={formData.sold}
                                             onChange={(e) => setFormData({ ...formData, sold: e.target.checked })}
                                             className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <span className="text-gray-700 font-medium">Venduta</span>
+                                        <div>
+                                            <span className="text-gray-700 font-medium block">🤝 Venduta</span>
+                                            <span className="text-xs text-gray-500">L'auto è stata venduta a un cliente</span>
+                                        </div>
                                     </label>
                                 </div>
                             </div>
