@@ -533,13 +533,13 @@
                         </div>
                         
                         {/* Fuel and Price Filters */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <i className="fas fa-gas-pump text-gray-500"></i>
                                 <select
                                     value={fuelFilter}
                                     onChange={(e) => setFuelFilter(e.target.value)}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                 >
                                     <option value="all">Tutte le alimentazioni</option>
                                     <option value="benzina">⛽ Benzina</option>
@@ -550,7 +550,7 @@
                                     <option value="elettrico">⚡ Elettrico</option>
                                 </select>
                             </div>
-                            <div className="flex flex-col gap-2">
+                            <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm text-gray-600">
                                         <i className="fas fa-euro-sign mr-1"></i>Prezzo max:
@@ -573,6 +573,15 @@
                                     <span>€50.000</span>
                                 </div>
                             </div>
+                            {(fuelFilter !== 'all' || maxPrice < 50000) && (
+                                <button
+                                    onClick={() => { setFuelFilter('all'); setMaxPrice(50000); }}
+                                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <i className="fas fa-times-circle mr-2"></i>
+                                    Cancella filtri
+                                </button>
+                            )}
                         </div>
                         
                         <div className="flex flex-wrap gap-2">
