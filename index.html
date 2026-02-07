@@ -473,6 +473,9 @@
         // Continue with ParcoAuto and other components in next message due to length...
         
         function ParcoAuto({ vehicles, searchQuery, setSearchQuery, filterStatus, setFilterStatus, onSelectVehicle, onAddVehicle }) {
+            const [fuelFilter, setFuelFilter] = React.useState('all');
+            const [maxPrice, setMaxPrice] = React.useState(50000);
+            
             const filteredVehicles = vehicles.filter(v => {
                 const matchesSearch = !searchQuery || 
                     v.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -486,7 +489,12 @@
                     (filterStatus === 'disponibili' && (v.delivered || v.inStock) && !v.sold) ||
                     (filterStatus === 'vendute' && v.sold);
 
-                return matchesSearch && matchesFilter;
+                const matchesFuel = fuelFilter === 'all' || v.fuelType === fuelFilter;
+                
+                const salePrice = parseFloat(v.salePrice) || 0;
+                const matchesPrice = salePrice <= maxPrice;
+
+                return matchesSearch && matchesFilter && matchesFuel && matchesPrice;
             });
 
             const calculateMargin = (v) => {
@@ -523,6 +531,50 @@
                                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
+                        
+                        {/* Fuel and Price Filters */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-2">
+                                <i className="fas fa-gas-pump text-gray-500"></i>
+                                <select
+                                    value={fuelFilter}
+                                    onChange={(e) => setFuelFilter(e.target.value)}
+                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                >
+                                    <option value="all">Tutte le alimentazioni</option>
+                                    <option value="benzina">⛽ Benzina</option>
+                                    <option value="diesel">🚛 Diesel</option>
+                                    <option value="benzina-metano">⛽🔵 Benzina/Metano</option>
+                                    <option value="benzina-gpl">⛽🟠 Benzina/GPL</option>
+                                    <option value="hybrid">🔋 Hybrid</option>
+                                    <option value="elettrico">⚡ Elettrico</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">
+                                        <i className="fas fa-euro-sign mr-1"></i>Prezzo max:
+                                    </span>
+                                    <span className="text-sm font-bold text-blue-600">
+                                        €{maxPrice.toLocaleString('it-IT')}
+                                    </span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="50000"
+                                    step="1000"
+                                    value={maxPrice}
+                                    onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                />
+                                <div className="flex justify-between text-xs text-gray-500">
+                                    <span>€0</span>
+                                    <span>€50.000</span>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div className="flex flex-wrap gap-2">
                             {[
                                 { id: 'all', label: 'Tutte', count: vehicles.length },
