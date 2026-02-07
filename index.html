@@ -645,7 +645,7 @@
                                             </span>
                                         </div>
                                         <div className="pt-3 border-t flex flex-wrap gap-2">
-                                            {!vehicle.transportOrdered && !vehicle.inStock && (
+                                            {!vehicle.transportOrdered && !vehicle.inStock && !vehicle.sold && (
                                                 <span className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full font-medium">
                                                     <i className="fas fa-clock mr-1"></i>Da Trasportare
                                                 </span>
@@ -655,7 +655,7 @@
                                                     <i className="fas fa-warehouse mr-1"></i>In Stock
                                                 </span>
                                             )}
-                                            {vehicle.transportOrdered && !vehicle.delivered && (
+                                            {vehicle.transportOrdered && !vehicle.delivered && !vehicle.sold && (
                                                 <div className="flex flex-col gap-1 w-full">
                                                     <span className="bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-full font-medium">
                                                         <i className="fas fa-truck mr-1"></i>In Arrivo
