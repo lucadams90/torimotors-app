@@ -1363,42 +1363,42 @@
                             </div>
                         </div>
 
-                        <div className="p-6 space-y-6 overflow-y-auto flex-1">
-                            <div className="flex flex-wrap gap-3">
-                                <button onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-                                    <i className="fas fa-edit mr-2"></i>Modifica
+                        <div className="p-4 sm:p-6 space-y-6 overflow-y-auto flex-1">
+                            <div className="flex flex-wrap gap-2 sm:gap-3">
+                                <button onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap">
+                                    <i className="fas fa-edit mr-1 sm:mr-2"></i>Modifica
                                 </button>
-                                <button onClick={() => onDelete(vehicle.id)} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
-                                    <i className="fas fa-trash mr-2"></i>Elimina
+                                <button onClick={() => onDelete(vehicle.id)} className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap">
+                                    <i className="fas fa-trash mr-1 sm:mr-2"></i>Elimina
                                 </button>
                                 <button
                                     onClick={() => setShowReceiptModal(true)}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                                    className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                 >
-                                    <i className="fas fa-file-invoice mr-2"></i>Ricevuta
+                                    <i className="fas fa-file-invoice mr-1 sm:mr-2"></i>Ricevuta
                                 </button>
                                 {!vehicle.inStock && (
                                     <button
                                         onClick={() => onUpdate(vehicle.id, { inStock: true, transportOrdered: false, delivered: false })}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+                                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                     >
-                                        <i className="fas fa-warehouse mr-2"></i>Segna In Stock
+                                        <i className="fas fa-warehouse mr-1 sm:mr-2"></i>In Stock
                                     </button>
                                 )}
                                 {!vehicle.transportOrdered && !vehicle.inStock && (
                                     <button
                                         onClick={() => onUpdate(vehicle.id, { transportOrdered: true, inStock: false })}
-                                        className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg"
+                                        className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                     >
-                                        <i className="fas fa-truck mr-2"></i>Ordina Trasporto
+                                        <i className="fas fa-truck mr-1 sm:mr-2"></i>Ordina Trasporto
                                     </button>
                                 )}
                                 {vehicle.transportOrdered && !vehicle.delivered && (
                                     <button
                                         onClick={handleDelivered}
-                                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+                                        className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                     >
-                                        <i className="fas fa-check mr-2"></i>Segna Consegnata
+                                        <i className="fas fa-check mr-1 sm:mr-2"></i>Consegnata
                                     </button>
                                 )}
                             </div>
