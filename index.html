@@ -1479,54 +1479,42 @@
                                     <div className="border-b pb-4">
                                         <h4 className="font-semibold mb-3 flex items-center">
                                             <i className="fas fa-id-card mr-2 text-amber-600"></i>
-                                            Foto Libretto
+                                            Libretto
                                         </h4>
                                         {vehicle.licensePlatePhotos && vehicle.licensePlatePhotos.length > 0 ? (
-                                            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-3">
-                                                {vehicle.licensePlatePhotos.map((photo, index) => {
-                                                    const isPDF = photo.toLowerCase().includes('.pdf');
-                                                    return (
-                                                        <div key={index} className="relative group">
-                                                            {isPDF ? (
-                                                                <a 
-                                                                    href={photo}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="block w-full h-20 bg-red-100 rounded border flex items-center justify-center cursor-pointer hover:bg-red-200"
-                                                                >
-                                                                    <i className="fas fa-file-pdf text-3xl text-red-600"></i>
-                                                                </a>
-                                                            ) : (
-                                                                <img 
-                                                                    src={photo} 
-                                                                    alt={`Libretto ${index + 1}`}
-                                                                    className="w-full h-20 object-cover rounded border cursor-pointer"
-                                                                    onClick={() => setViewerImage(photo)}
-                                                                />
-                                                            )}
-                                                            <button
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    if (confirm('Eliminare questo documento?')) {
-                                                                        await deleteFile(photo);
-                                                                        const newPhotos = vehicle.licensePlatePhotos.filter((_, i) => i !== index);
-                                                                        onUpdate(vehicle.id, { licensePlatePhotos: newPhotos });
-                                                                    }
-                                                                }}
-                                                                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })}
+                                            <div className="space-y-2 mb-3">
+                                                {vehicle.licensePlatePhotos.map((doc, index) => (
+                                                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded">
+                                                        <a 
+                                                            href={doc} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="text-blue-600 hover:underline flex items-center"
+                                                        >
+                                                            <i className="fas fa-file mr-2"></i>
+                                                            Visualizza Documento {index + 1}
+                                                        </a>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (confirm('Eliminare questo documento?')) {
+                                                                    await deleteFile(doc);
+                                                                    const newDocs = vehicle.licensePlatePhotos.filter((_, i) => i !== index);
+                                                                    onUpdate(vehicle.id, { licensePlatePhotos: newDocs });
+                                                                }
+                                                            }}
+                                                            className="text-red-600 hover:text-red-800"
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
                                         ) : (
-                                            <p className="text-gray-500 text-sm mb-3">Nessuna foto caricata</p>
+                                            <p className="text-gray-500 text-sm mb-3">Nessun documento caricato</p>
                                         )}
                                         <input
                                             type="file"
-                                            accept="image/*,.pdf"
+                                            accept="*/*"
                                             multiple
                                             id="licensePlateUpload"
                                             className="hidden"
@@ -1550,7 +1538,7 @@
                                             htmlFor="licensePlateUpload"
                                             className="inline-block bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors"
                                         >
-                                            <i className="fas fa-upload mr-2"></i>Carica Foto Libretto
+                                            <i className="fas fa-upload mr-2"></i>Carica Libretto
                                         </label>
                                     </div>
 
@@ -1588,7 +1576,7 @@
                                         )}
                                         <input
                                             type="file"
-                                            accept="image/*,.pdf"
+                                            accept="*/*"
                                             id="purchaseInvoiceUpload"
                                             className="hidden"
                                             onChange={async (e) => {
@@ -1645,7 +1633,7 @@
                                         )}
                                         <input
                                             type="file"
-                                            accept="image/*,.pdf"
+                                            accept="*/*"
                                             id="transportInvoiceUpload"
                                             className="hidden"
                                             onChange={async (e) => {
