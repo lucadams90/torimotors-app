@@ -1568,12 +1568,43 @@
                                                 }
                                             }}
                                         />
-                                        <label 
-                                            htmlFor="licensePlateUpload"
-                                            className="inline-block bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors"
-                                        >
-                                            <i className="fas fa-upload mr-2"></i>Carica Libretto
-                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            multiple
+                                            id="licensePlateCamera"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const files = Array.from(e.target.files);
+                                                if (files.length === 0) return;
+                                                try {
+                                                    const uploadPromises = files.map(file => 
+                                                        uploadFile(file, `vehicles/${vehicle.id}/license/${Date.now()}_${file.name}`)
+                                                    );
+                                                    const urls = await Promise.all(uploadPromises);
+                                                    const current = vehicle.licensePlatePhotos || [];
+                                                    onUpdate(vehicle.id, { licensePlatePhotos: [...current, ...urls] });
+                                                    e.target.value = '';
+                                                } catch (error) {
+                                                    alert('Errore: ' + error.message);
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex gap-2">
+                                            <label 
+                                                htmlFor="licensePlateUpload"
+                                                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-upload mr-2"></i>Carica
+                                            </label>
+                                            <label 
+                                                htmlFor="licensePlateCamera"
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-camera mr-2"></i>Foto
+                                            </label>
+                                        </div>
                                     </div>
 
                                     {/* Fattura Acquisto */}
@@ -1625,12 +1656,38 @@
                                                 }
                                             }}
                                         />
-                                        <label 
-                                            htmlFor="purchaseInvoiceUpload"
-                                            className="inline-block bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors"
-                                        >
-                                            <i className="fas fa-upload mr-2"></i>Carica Fattura Acquisto
-                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            id="purchaseInvoiceCamera"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                try {
+                                                    const url = await uploadFile(file, `vehicles/${vehicle.id}/invoice_purchase_${Date.now()}_${file.name}`);
+                                                    onUpdate(vehicle.id, { purchaseInvoice: url });
+                                                    e.target.value = '';
+                                                } catch (error) {
+                                                    alert('Errore: ' + error.message);
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex gap-2">
+                                            <label 
+                                                htmlFor="purchaseInvoiceUpload"
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-upload mr-2"></i>Carica
+                                            </label>
+                                            <label 
+                                                htmlFor="purchaseInvoiceCamera"
+                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-camera mr-2"></i>Foto
+                                            </label>
+                                        </div>
                                     </div>
 
                                     {/* Fattura Trasporto */}
@@ -1682,12 +1739,38 @@
                                                 }
                                             }}
                                         />
-                                        <label 
-                                            htmlFor="transportInvoiceUpload"
-                                            className="inline-block bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors"
-                                        >
-                                            <i className="fas fa-upload mr-2"></i>Carica Fattura Trasporto
-                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            id="transportInvoiceCamera"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                try {
+                                                    const url = await uploadFile(file, `vehicles/${vehicle.id}/invoice_transport_${Date.now()}_${file.name}`);
+                                                    onUpdate(vehicle.id, { transportInvoice: url });
+                                                    e.target.value = '';
+                                                } catch (error) {
+                                                    alert('Errore: ' + error.message);
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex gap-2">
+                                            <label 
+                                                htmlFor="transportInvoiceUpload"
+                                                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-upload mr-2"></i>Carica
+                                            </label>
+                                            <label 
+                                                htmlFor="transportInvoiceCamera"
+                                                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg cursor-pointer text-sm transition-colors text-center"
+                                            >
+                                                <i className="fas fa-camera mr-2"></i>Foto
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
