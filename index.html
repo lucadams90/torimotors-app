@@ -27,6 +27,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,6 +51,23 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
+        
+        // Storage helper functions
+        const uploadFile = async (file, path) => {
+            const storageRef = storage.ref(path);
+            const snapshot = await storageRef.put(file);
+            return await snapshot.ref.getDownloadURL();
+        };
+        
+        const deleteFile = async (url) => {
+            try {
+                const fileRef = storage.refFromURL(url);
+                await fileRef.delete();
+            } catch (error) {
+                console.error('Error deleting file:', error);
+            }
+        };
         
         // Receipt counter management
         const getNextReceiptNumber = async () => {
@@ -621,6 +639,19 @@
                                     onClick={() => onSelectVehicle(vehicle)}
                                     className="bg-white rounded-lg shadow hover:shadow-xl transition-shadow cursor-pointer overflow-hidden"
                                 >
+                                    {vehicle.photos && vehicle.photos.length > 0 ? (
+                                        <div className="h-48 bg-gray-200 overflow-hidden">
+                                            <img 
+                                                src={vehicle.photos[0]} 
+                                                alt={`${vehicle.brand} ${vehicle.model}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="h-48 bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                                            <i className="fas fa-car text-6xl text-gray-500"></i>
+                                        </div>
+                                    )}
                                     <div className="bg-gradient-to-r from-slate-700 to-blue-800 text-white p-4">
                                         <h3 className="font-bold text-xl mb-1">{vehicle.brand} {vehicle.model}</h3>
                                         <p className="text-sm text-slate-200">{vehicle.plate}</p>
@@ -1358,6 +1389,69 @@
                                         <i className="fas fa-check mr-2"></i>Segna Consegnata
                                     </button>
                                 )}
+                            </div>
+
+                            {/* Photo Section */}
+                            <div className="bg-white border-2 border-dashed border-gray-300 rounded-lg p-6">
+                                <h3 className="font-bold text-lg mb-4">
+                                    <i className="fas fa-camera mr-2 text-blue-600"></i>Foto Auto
+                                </h3>
+                                {vehicle.photos && vehicle.photos.length > 0 ? (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                        {vehicle.photos.map((photo, index) => (
+                                            <div key={index} className="relative group">
+                                                <img 
+                                                    src={photo} 
+                                                    alt={`Foto ${index + 1}`}
+                                                    className="w-full h-32 object-cover rounded-lg"
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        if (confirm('Eliminare questa foto?')) {
+                                                            await deleteFile(photo);
+                                                            const newPhotos = vehicle.photos.filter((_, i) => i !== index);
+                                                            onUpdate(vehicle.id, { photos: newPhotos });
+                                                        }
+                                                    }}
+                                                    className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <i className="fas fa-times text-xs"></i>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 text-center py-4 mb-4">Nessuna foto caricata</p>
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    id="photoUpload"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files);
+                                        if (files.length === 0) return;
+                                        
+                                        try {
+                                            const uploadPromises = files.map(file => 
+                                                uploadFile(file, `vehicles/${vehicle.id}/photos/${Date.now()}_${file.name}`)
+                                            );
+                                            const urls = await Promise.all(uploadPromises);
+                                            const currentPhotos = vehicle.photos || [];
+                                            onUpdate(vehicle.id, { photos: [...currentPhotos, ...urls] });
+                                            e.target.value = '';
+                                        } catch (error) {
+                                            alert('Errore durante il caricamento: ' + error.message);
+                                        }
+                                    }}
+                                />
+                                <label 
+                                    htmlFor="photoUpload"
+                                    className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center px-4 py-3 rounded-lg cursor-pointer transition-colors"
+                                >
+                                    <i className="fas fa-upload mr-2"></i>Carica Foto
+                                </label>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
