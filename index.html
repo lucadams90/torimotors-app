@@ -1462,12 +1462,20 @@
                                         }
                                     }}
                                 />
-                                <label 
-                                    htmlFor="photoUpload"
-                                    className="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center px-4 py-3 rounded-lg cursor-pointer transition-colors"
-                                >
-                                    <i className="fas fa-upload mr-2"></i>Carica Foto
-                                </label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <label 
+                                        htmlFor="photoUpload"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white text-center px-4 py-3 rounded-lg cursor-pointer transition-colors"
+                                    >
+                                        <i className="fas fa-upload mr-2"></i>Carica
+                                    </label>
+                                    <label 
+                                        htmlFor="photoUpload"
+                                        className="bg-green-600 hover:bg-green-700 text-white text-center px-4 py-3 rounded-lg cursor-pointer transition-colors"
+                                    >
+                                        <i className="fas fa-camera mr-2"></i>Fotocamera
+                                    </label>
+                                </div>
                             </div>
 
                             {/* Documents Section */}
