@@ -653,7 +653,10 @@
                                         </div>
                                     )}
                                     <div className="bg-gradient-to-r from-slate-700 to-blue-800 text-white p-4">
-                                        <h3 className="font-bold text-xl mb-1">{vehicle.brand} {vehicle.model}</h3>
+                                        <h3 className="font-bold text-xl mb-1">
+                                            {vehicle.brand} {vehicle.model}
+                                            {vehicle.year && <span className="ml-2 text-slate-300">({vehicle.year})</span>}
+                                        </h3>
                                         <p className="text-sm text-slate-200">{vehicle.plate}</p>
                                     </div>
                                     <div className="p-4 space-y-3">
@@ -776,6 +779,7 @@
                 model: '',
                 plate: '',
                 vin: '',
+                year: '',
                 km: '',
                 fuelType: 'benzina',
                 taxRegime: 'margine',
@@ -796,6 +800,41 @@
                 sellerCity: '',
                 sellerFiscalCode: ''
             });
+
+            // Database marche e modelli
+            const carDatabase = {
+                'Alfa Romeo': ['Giulia', 'Giulietta', 'Stelvio', 'Tonale', 'MiTo', '159', '147'],
+                'Audi': ['A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'e-tron'],
+                'BMW': ['Serie 1', 'Serie 2', 'Serie 3', 'Serie 4', 'Serie 5', 'Serie 6', 'Serie 7', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'iX3', 'i4'],
+                'Citroen': ['C1', 'C3', 'C3 Aircross', 'C4', 'C4 Cactus', 'C5 Aircross', 'Berlingo'],
+                'Dacia': ['Sandero', 'Duster', 'Jogger', 'Spring', 'Logan'],
+                'Fiat': ['Panda', '500', '500X', '500L', 'Tipo', 'Punto', 'Bravo', 'Ducato', 'Doblò'],
+                'Ford': ['Fiesta', 'Focus', 'Puma', 'Kuga', 'Mustang', 'Transit', 'EcoSport'],
+                'Honda': ['Civic', 'Jazz', 'HR-V', 'CR-V', 'Accord'],
+                'Hyundai': ['i10', 'i20', 'i30', 'Tucson', 'Kona', 'Santa Fe', 'Ioniq'],
+                'Jeep': ['Renegade', 'Compass', 'Wrangler', 'Cherokee', 'Grand Cherokee'],
+                'Kia': ['Picanto', 'Rio', 'Stonic', 'Ceed', 'Sportage', 'Sorento', 'EV6'],
+                'Lancia': ['Ypsilon', 'Delta', 'Musa'],
+                'Land Rover': ['Defender', 'Discovery', 'Discovery Sport', 'Range Rover', 'Range Rover Sport', 'Range Rover Evoque'],
+                'Mazda': ['2', '3', '6', 'CX-3', 'CX-30', 'CX-5', 'MX-5'],
+                'Mercedes-Benz': ['Classe A', 'Classe B', 'Classe C', 'Classe E', 'Classe S', 'GLA', 'GLB', 'GLC', 'GLE', 'GLS', 'EQA', 'EQB', 'EQC'],
+                'Mini': ['Cooper', 'Countryman', 'Clubman', 'Cabrio'],
+                'Nissan': ['Micra', 'Juke', 'Qashqai', 'X-Trail', 'Leaf'],
+                'Opel': ['Corsa', 'Astra', 'Mokka', 'Crossland', 'Grandland', 'Insignia'],
+                'Peugeot': ['108', '208', '2008', '308', '3008', '508', '5008', 'Rifter'],
+                'Renault': ['Twingo', 'Clio', 'Captur', 'Megane', 'Kadjar', 'Scenic', 'Zoe'],
+                'Seat': ['Ibiza', 'Arona', 'Leon', 'Ateca', 'Tarraco'],
+                'Skoda': ['Fabia', 'Scala', 'Kamiq', 'Octavia', 'Karoq', 'Kodiaq', 'Superb', 'Enyaq'],
+                'Smart': ['Fortwo', 'Forfour'],
+                'Suzuki': ['Ignis', 'Swift', 'Vitara', 'S-Cross', 'Jimny'],
+                'Tesla': ['Model 3', 'Model S', 'Model X', 'Model Y'],
+                'Toyota': ['Aygo', 'Yaris', 'Corolla', 'C-HR', 'RAV4', 'Highlander', 'Land Cruiser'],
+                'Volkswagen': ['up!', 'Polo', 'Golf', 'T-Cross', 'T-Roc', 'Tiguan', 'Touareg', 'Passat', 'ID.3', 'ID.4'],
+                'Volvo': ['XC40', 'XC60', 'XC90', 'V40', 'V60', 'V90', 'S60', 'S90']
+            };
+
+            const brands = Object.keys(carDatabase).sort();
+            const models = formData.brand && carDatabase[formData.brand] ? carDatabase[formData.brand] : [];
 
             const generateReceipt = async () => {
                 if (!receiptData.sellerName) {
@@ -925,23 +964,32 @@
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Marca *</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={formData.brand}
-                                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, brand: e.target.value, model: '' })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                         required
-                                    />
+                                    >
+                                        <option value="">Seleziona marca...</option>
+                                        {brands.map(brand => (
+                                            <option key={brand} value={brand}>{brand}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Modello *</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         value={formData.model}
                                         onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                         required
-                                    />
+                                        disabled={!formData.brand}
+                                    >
+                                        <option value="">{formData.brand ? 'Seleziona modello...' : 'Prima seleziona una marca'}</option>
+                                        {models.map(model => (
+                                            <option key={model} value={model}>{model}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Targa *</label>
@@ -962,6 +1010,20 @@
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                         required
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Anno Immatricolazione *</label>
+                                    <select
+                                        value={formData.year}
+                                        onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        required
+                                    >
+                                        <option value="">Seleziona anno...</option>
+                                        {Array.from({ length: 2025 - 1950 + 1 }, (_, i) => 2025 - i).map(year => (
+                                            <option key={year} value={year}>{year}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Chilometri *</label>
