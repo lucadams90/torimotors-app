@@ -984,7 +984,14 @@
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                onSave(formData);
+                
+                // Add saleDate if marking as sold and no previous saleDate
+                const dataToSave = { ...formData };
+                if (dataToSave.sold && !vehicle?.sold && !dataToSave.saleDate) {
+                    dataToSave.saleDate = new Date().toISOString().split('T')[0];
+                }
+                
+                onSave(dataToSave);
             };
 
             return (
@@ -1394,7 +1401,8 @@
                 onUpdate(vehicle.id, { 
                     delivered: true,
                     inStock: true,
-                    transportOrdered: false
+                    transportOrdered: false,
+                    deliveredDate: new Date().toISOString().split('T')[0]
                 });
             };
 
@@ -1512,7 +1520,12 @@
                                 </button>
                                 {!vehicle.inStock && (
                                     <button
-                                        onClick={() => onUpdate(vehicle.id, { inStock: true, transportOrdered: false, delivered: false })}
+                                        onClick={() => onUpdate(vehicle.id, { 
+                                            inStock: true, 
+                                            transportOrdered: false, 
+                                            delivered: false,
+                                            inStockDate: new Date().toISOString().split('T')[0]
+                                        })}
                                         className="bg-purple-600 hover:bg-purple-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                     >
                                         <i className="fas fa-warehouse mr-1 sm:mr-2"></i>In Stock
@@ -1520,7 +1533,11 @@
                                 )}
                                 {!vehicle.transportOrdered && !vehicle.inStock && (
                                     <button
-                                        onClick={() => onUpdate(vehicle.id, { transportOrdered: true, inStock: false })}
+                                        onClick={() => onUpdate(vehicle.id, { 
+                                            transportOrdered: true, 
+                                            inStock: false,
+                                            transportOrderedDate: new Date().toISOString().split('T')[0]
+                                        })}
                                         className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
                                     >
                                         <i className="fas fa-truck mr-1 sm:mr-2"></i>Ordina Trasporto
@@ -2235,22 +2252,22 @@
             const [selectedYear, setSelectedYear] = useState('all');
             const [selectedMonth, setSelectedMonth] = useState('all');
 
-            // Get unique years from sold vehicles
+            // Get unique years from sold vehicles based on sale date
             const years = [...new Set(vehicles
-                .filter(v => v.sold && v.purchaseDate)
-                .map(v => new Date(v.purchaseDate).getFullYear())
+                .filter(v => v.sold && v.saleDate)
+                .map(v => new Date(v.saleDate).getFullYear())
             )].sort((a, b) => b - a);
 
-            // Filter sold vehicles by selected year/month
+            // Filter sold vehicles by selected year/month based on sale date
             const soldVehicles = vehicles.filter(v => {
                 if (!v.sold) return false;
                 
                 if (selectedYear !== 'all') {
-                    const year = v.purchaseDate ? new Date(v.purchaseDate).getFullYear() : null;
+                    const year = v.saleDate ? new Date(v.saleDate).getFullYear() : null;
                     if (year !== parseInt(selectedYear)) return false;
                     
                     if (selectedMonth !== 'all') {
-                        const month = v.purchaseDate ? new Date(v.purchaseDate).getMonth() : null;
+                        const month = v.saleDate ? new Date(v.saleDate).getMonth() : null;
                         if (month !== parseInt(selectedMonth)) return false;
                     }
                 }
