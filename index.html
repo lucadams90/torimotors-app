@@ -798,6 +798,15 @@
                                                         €{(parseFloat(vehicle.salePrice) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
                                                     </span>
                                                 </div>
+                                                {/* Trade Price */}
+                                                {vehicle.tradePrice && (
+                                                    <div className="flex justify-between items-center text-xs -mx-4 px-4 pb-2">
+                                                        <span className="text-gray-500">💼 Prezzo Commercianti:</span>
+                                                        <span className="font-semibold text-purple-600">
+                                                            €{(parseFloat(vehicle.tradePrice) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between text-sm pt-1">
                                                     <span className="text-gray-600">Costo Totale:</span>
                                                     <span className="font-semibold text-red-600">
