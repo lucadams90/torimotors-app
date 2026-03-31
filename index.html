@@ -86,12 +86,18 @@
         const { useState, useEffect } = React;
 
         function App() {
-            // Check if we're on /catalogo route
-            const isPublicCatalog = window.location.pathname === '/catalogo' || window.location.hash === '#/catalogo';
+            // Check routes
+            const isTradeCatalog = window.location.pathname === '/catalogo' || window.location.hash === '#/catalogo';
+            const isPublicSale = window.location.pathname === '/vendita' || window.location.hash === '#/vendita';
             
-            // If public catalog, render that instead
-            if (isPublicCatalog) {
-                return <PublicCatalog />;
+            // Trade catalog (with password)
+            if (isTradeCatalog) {
+                return <TradeCatalog />;
+            }
+
+            // Public sale catalog (no password)
+            if (isPublicSale) {
+                return <PublicSaleCatalog />;
             }
 
             const [user, setUser] = useState(null);
@@ -450,22 +456,40 @@
                                 ))}
                             </nav>
 
-                            {/* Catalogo Button */}
-                            <div className="px-4 pb-4">
+                            {/* Catalog Buttons */}
+                            <div className="px-4 pb-4 space-y-2">
+                                {/* Public Sale Catalog */}
                                 <button
                                     onClick={() => {
-                                        const catalogUrl = window.location.origin + '/catalogo';
-                                        navigator.clipboard.writeText(catalogUrl).then(() => {
-                                            alert('✅ Link catalogo copiato!\n\n' + catalogUrl + '\n\nInvia questo link ai commercianti.');
+                                        const publicUrl = window.location.origin + '/vendita';
+                                        navigator.clipboard.writeText(publicUrl).then(() => {
+                                            alert('✅ Link pubblico copiato!\n\n' + publicUrl + '\n\nChiunque può vedere le auto in vendita (prezzo pubblico).');
                                         }).catch(() => {
-                                            alert('Link catalogo:\n\n' + catalogUrl + '\n\nCopia manualmente questo link.');
+                                            alert('Link pubblico:\n\n' + publicUrl + '\n\nCopia manualmente questo link.');
+                                        });
+                                        setSidebarOpen(false);
+                                    }}
+                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-3 rounded-lg transition-all shadow-lg font-medium"
+                                >
+                                    <i className="fas fa-globe mr-2"></i>
+                                    Copia Link Pubblico
+                                </button>
+                                
+                                {/* Trade Catalog (Password) */}
+                                <button
+                                    onClick={() => {
+                                        const tradeUrl = window.location.origin + '/catalogo';
+                                        navigator.clipboard.writeText(tradeUrl).then(() => {
+                                            alert('🔐 Link commercianti copiato!\n\n' + tradeUrl + '\n\nPassword: commercianti2026\n\nInvia questo link e la password ai commercianti.');
+                                        }).catch(() => {
+                                            alert('Link commercianti:\n\n' + tradeUrl + '\n\nPassword: commercianti2026\n\nCopia manualmente questo link.');
                                         });
                                         setSidebarOpen(false);
                                     }}
                                     className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg transition-all shadow-lg font-medium"
                                 >
-                                    <i className="fas fa-link mr-2"></i>
-                                    Copia Link Catalogo
+                                    <i className="fas fa-lock mr-2"></i>
+                                    Copia Link Commercianti
                                 </button>
                             </div>
 
@@ -2458,8 +2482,82 @@
             );
         }
 
-        // Public Catalog for Trade Customers - No Login Required
-        function PublicCatalog() {
+        // Trade Catalog for Wholesalers - Password Protected
+        function TradeCatalog() {
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const TRADE_PASSWORD = 'commercianti2026';
+
+            const handlePasswordSubmit = (e) => {
+                e.preventDefault();
+                if (passwordInput === TRADE_PASSWORD) {
+                    setIsAuthenticated(true);
+                    sessionStorage.setItem('tradeCatalogAuth', 'true');
+                } else {
+                    alert('❌ Password errata! Riprova.');
+                    setPasswordInput('');
+                }
+            };
+
+            // Check if already authenticated in this session
+            useEffect(() => {
+                if (sessionStorage.getItem('tradeCatalogAuth') === 'true') {
+                    setIsAuthenticated(true);
+                }
+            }, []);
+
+            // Show password screen if not authenticated
+            if (!isAuthenticated) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-blue-900 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+                            <div className="text-center mb-6">
+                                <i className="fas fa-lock text-6xl text-blue-600 mb-4"></i>
+                                <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                                    Catalogo Commercianti
+                                </h1>
+                                <p className="text-gray-600">
+                                    Inserisci la password per accedere
+                                </p>
+                            </div>
+                            <form onSubmit={handlePasswordSubmit}>
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Inserisci password..."
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors"
+                                >
+                                    <i className="fas fa-sign-in-alt mr-2"></i>
+                                    Accedi
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return <CatalogContent priceType="trade" title="Catalogo Commercianti" />;
+        }
+
+        // Public Sale Catalog - No Password Required
+        function PublicSaleCatalog() {
+            return <CatalogContent priceType="sale" title="Catalogo Vendita" />;
+        }
+
+        // Shared Catalog Component
+        function CatalogContent({ priceType, title }) {
             const [vehicles, setVehicles] = useState([]);
             const [loading, setLoading] = useState(true);
             const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -2500,8 +2598,10 @@
                 // Fuel filter
                 if (fuelFilter !== 'all' && v.fuelType !== fuelFilter) return false;
 
-                // Price filter (using trade price if available, otherwise sale price)
-                const price = parseFloat(v.tradePrice || v.salePrice || 0);
+                // Price filter - use trade price for trade catalog, sale price for public
+                const price = priceType === 'trade' 
+                    ? parseFloat(v.tradePrice || v.salePrice || 0)
+                    : parseFloat(v.salePrice || 0);
                 if (price > maxPrice) return false;
 
                 return true;
@@ -2529,9 +2629,11 @@
                         <div className="max-w-7xl mx-auto">
                             <h1 className="text-3xl font-bold mb-2">
                                 <i className="fas fa-car mr-3"></i>
-                                TO.RI. MOTORS - Catalogo Commercianti
+                                TO.RI. MOTORS - {title}
                             </h1>
-                            <p className="text-slate-200">Auto disponibili per il settore trade</p>
+                            <p className="text-slate-200">
+                                {priceType === 'trade' ? 'Auto disponibili per il settore trade' : 'Auto disponibili in vendita'}
+                            </p>
                         </div>
                     </div>
 
@@ -2693,12 +2795,14 @@
                                                 )}
                                             </div>
 
-                                            {/* Trade Price */}
-                                            {vehicle.tradePrice && (
+                                            {/* Price Display */}
+                                            {(priceType === 'trade' ? vehicle.tradePrice : vehicle.salePrice) && (
                                                 <div className="pt-3 border-t mt-3">
-                                                    <p className="text-sm text-gray-600 mb-1">Prezzo Commercianti</p>
+                                                    <p className="text-sm text-gray-600 mb-1">
+                                                        {priceType === 'trade' ? '💼 Prezzo Commercianti' : '💶 Prezzo Vendita'}
+                                                    </p>
                                                     <p className="text-2xl font-bold text-blue-600">
-                                                        €{parseFloat(vehicle.tradePrice).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                                                        €{parseFloat(priceType === 'trade' ? vehicle.tradePrice : vehicle.salePrice).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
                                             )}
@@ -2786,11 +2890,13 @@
                                                     {selectedVehicle.transportOrdered && !selectedVehicle.delivered && '🚚 In Arrivo'}
                                                 </p>
                                             </div>
-                                            {selectedVehicle.tradePrice && (
+                                            {(priceType === 'trade' ? selectedVehicle.tradePrice : selectedVehicle.salePrice) && (
                                                 <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
-                                                    <p className="text-sm text-blue-600 mb-1 font-semibold">💼 Prezzo Commercianti</p>
+                                                    <p className="text-sm text-blue-600 mb-1 font-semibold">
+                                                        {priceType === 'trade' ? '💼 Prezzo Commercianti' : '💶 Prezzo Vendita'}
+                                                    </p>
                                                     <p className="font-bold text-2xl text-blue-600">
-                                                        €{parseFloat(selectedVehicle.tradePrice).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                                                        €{parseFloat(priceType === 'trade' ? selectedVehicle.tradePrice : selectedVehicle.salePrice).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                                                     </p>
                                                 </div>
                                             )}
