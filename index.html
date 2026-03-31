@@ -2464,6 +2464,8 @@
             const [loading, setLoading] = useState(true);
             const [selectedVehicle, setSelectedVehicle] = useState(null);
             const [filterStatus, setFilterStatus] = useState('all');
+            const [fuelFilter, setFuelFilter] = useState('all');
+            const [maxPrice, setMaxPrice] = useState(100000);
 
             useEffect(() => {
                 // Fetch vehicles without authentication
@@ -2488,15 +2490,21 @@
                 if (v.sold) return false; // Never show sold cars
                 
                 if (filterStatus === 'all') {
-                    return v.inStock || v.transportOrdered;
+                    if (!v.inStock && !v.transportOrdered) return false;
+                } else if (filterStatus === 'in-stock') {
+                    if (!v.inStock) return false;
+                } else if (filterStatus === 'in-arrivo') {
+                    if (!v.transportOrdered || v.delivered) return false;
                 }
-                if (filterStatus === 'in-stock') {
-                    return v.inStock;
-                }
-                if (filterStatus === 'in-arrivo') {
-                    return v.transportOrdered && !v.delivered;
-                }
-                return false;
+
+                // Fuel filter
+                if (fuelFilter !== 'all' && v.fuelType !== fuelFilter) return false;
+
+                // Price filter (using trade price if available, otherwise sale price)
+                const price = parseFloat(v.tradePrice || v.salePrice || 0);
+                if (price > maxPrice) return false;
+
+                return true;
             }).sort((a, b) => {
                 const timeA = a.createdAt?.seconds || 0;
                 const timeB = b.createdAt?.seconds || 0;
@@ -2529,26 +2537,91 @@
 
                     {/* Filters */}
                     <div className="max-w-7xl mx-auto p-6">
-                        <div className="bg-white rounded-lg shadow p-4 mb-6">
-                            <div className="flex flex-wrap gap-2">
-                                {[
-                                    { id: 'all', label: 'Tutte Disponibili', count: vehicles.filter(v => !v.sold && (v.inStock || v.transportOrdered)).length },
-                                    { id: 'in-stock', label: 'In Stock', count: vehicles.filter(v => v.inStock && !v.sold).length },
-                                    { id: 'in-arrivo', label: 'In Arrivo', count: vehicles.filter(v => v.transportOrdered && !v.delivered && !v.sold).length }
-                                ].map(filter => (
-                                    <button
-                                        key={filter.id}
-                                        onClick={() => setFilterStatus(filter.id)}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                            filterStatus === filter.id
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
-                                    >
-                                        {filter.label} ({filter.count})
-                                    </button>
-                                ))}
+                        <div className="bg-white rounded-lg shadow p-4 mb-6 space-y-4">
+                            {/* Status Filters */}
+                            <div>
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    <i className="fas fa-filter mr-2"></i>Stato
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        { id: 'all', label: 'Tutte Disponibili', count: vehicles.filter(v => !v.sold && (v.inStock || v.transportOrdered)).length },
+                                        { id: 'in-stock', label: 'In Stock', count: vehicles.filter(v => v.inStock && !v.sold).length },
+                                        { id: 'in-arrivo', label: 'In Arrivo', count: vehicles.filter(v => v.transportOrdered && !v.delivered && !v.sold).length }
+                                    ].map(filter => (
+                                        <button
+                                            key={filter.id}
+                                            onClick={() => setFilterStatus(filter.id)}
+                                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                                filterStatus === filter.id
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {filter.label} ({filter.count})
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Fuel and Price Filters */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                                {/* Fuel Filter */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i className="fas fa-gas-pump mr-2"></i>Alimentazione
+                                    </label>
+                                    <select
+                                        value={fuelFilter}
+                                        onChange={(e) => setFuelFilter(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="all">Tutte le alimentazioni</option>
+                                        <option value="benzina">⛽ Benzina</option>
+                                        <option value="diesel">🚛 Diesel</option>
+                                        <option value="benzina-metano">⛽🔵 Benzina/Metano</option>
+                                        <option value="benzina-gpl">⛽🟠 Benzina/GPL</option>
+                                        <option value="hybrid">🔋 Hybrid</option>
+                                        <option value="elettrico">⚡ Elettrico</option>
+                                    </select>
+                                </div>
+
+                                {/* Price Filter */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        <i className="fas fa-euro-sign mr-2"></i>Prezzo massimo: €{maxPrice.toLocaleString('it-IT')}
+                                    </label>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100000"
+                                        step="1000"
+                                        value={maxPrice}
+                                        onChange={(e) => setMaxPrice(parseInt(e.target.value))}
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>€0</span>
+                                        <span>€100.000</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Clear Filters Button */}
+                            {(fuelFilter !== 'all' || maxPrice < 100000) && (
+                                <div className="pt-3 border-t">
+                                    <button
+                                        onClick={() => { 
+                                            setFuelFilter('all'); 
+                                            setMaxPrice(100000); 
+                                        }}
+                                        className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        <i className="fas fa-times-circle mr-2"></i>
+                                        Cancella filtri alimentazione/prezzo
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Vehicle Grid */}
