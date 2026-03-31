@@ -450,6 +450,25 @@
                                 ))}
                             </nav>
 
+                            {/* Catalogo Button */}
+                            <div className="px-4 pb-4">
+                                <button
+                                    onClick={() => {
+                                        const catalogUrl = window.location.origin + '/catalogo';
+                                        navigator.clipboard.writeText(catalogUrl).then(() => {
+                                            alert('✅ Link catalogo copiato!\n\n' + catalogUrl + '\n\nInvia questo link ai commercianti.');
+                                        }).catch(() => {
+                                            alert('Link catalogo:\n\n' + catalogUrl + '\n\nCopia manualmente questo link.');
+                                        });
+                                        setSidebarOpen(false);
+                                    }}
+                                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-4 py-3 rounded-lg transition-all shadow-lg font-medium"
+                                >
+                                    <i className="fas fa-link mr-2"></i>
+                                    Copia Link Catalogo
+                                </button>
+                            </div>
+
                             <div className="p-4 border-t border-slate-700">
                                 <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-3 text-xs text-green-300">
                                     <i className="fas fa-check-circle mr-2"></i>
