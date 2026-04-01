@@ -3134,6 +3134,8 @@
             const [filterStatus, setFilterStatus] = useState('all');
             const [fuelFilter, setFuelFilter] = useState('all');
             const [maxPrice, setMaxPrice] = useState(100000);
+            const [lightboxOpen, setLightboxOpen] = useState(false);
+            const [lightboxIndex, setLightboxIndex] = useState(0);
 
             useEffect(() => {
                 // Fetch vehicles without authentication
@@ -3312,11 +3314,7 @@
                                     >
                                         {/* Vehicle Image */}
                                         {vehicle.photos && vehicle.photos.length > 0 ? (
-                                            <img
-                                                src={vehicle.photos[0]}
-                                                alt={`${vehicle.brand} ${vehicle.model}`}
-                                                className="w-full h-48 object-cover"
-                                            />
+                                            <PhotoCarousel photos={vehicle.photos} alt={`${vehicle.brand} ${vehicle.model}`} />
                                         ) : (
                                             <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
                                                 <i className="fas fa-car text-6xl text-gray-400"></i>
@@ -3411,10 +3409,11 @@
                                                         key={index}
                                                         src={photo}
                                                         alt={`Foto ${index + 1}`}
-                                                        className="w-full h-48 object-cover rounded-lg shadow cursor-pointer hover:opacity-75"
+                                                        className="w-full h-48 object-cover rounded-lg shadow cursor-pointer hover:opacity-75 transition-opacity"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(photo, '_blank');
+                                                            setLightboxIndex(index);
+                                                            setLightboxOpen(true);
                                                         }}
                                                     />
                                                 ))}
@@ -3475,6 +3474,15 @@
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* Photo Lightbox */}
+                    {lightboxOpen && selectedVehicle && selectedVehicle.photos && selectedVehicle.photos.length > 0 && (
+                        <PhotoLightbox 
+                            photos={selectedVehicle.photos} 
+                            initialIndex={lightboxIndex}
+                            onClose={() => setLightboxOpen(false)}
+                        />
                     )}
 
                     {/* Footer */}
