@@ -938,12 +938,11 @@
                         className="flex h-full"
                         style={{
                             transform: `translateX(calc(-${currentIndex * 100}% + ${isDragging ? dragOffset : 0}px))`,
-                            transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            width: `${photos.length * 100}%`
+                            transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                         }}
                     >
                         {photos.map((photo, index) => (
-                            <div key={index} className="w-full h-full flex-shrink-0">
+                            <div key={index} className="flex-shrink-0" style={{ width: '100%' }}>
                                 <img 
                                     src={photo} 
                                     alt={`${alt} - ${index + 1}`}
@@ -1077,8 +1076,8 @@
 
                     {/* Main Image Container */}
                     <div 
-                        className="relative w-full max-w-7xl mx-auto px-4 overflow-hidden"
-                        style={{ height: '90vh' }}
+                        className="relative mx-auto px-4 overflow-hidden"
+                        style={{ height: '90vh', width: '100vw', maxWidth: '100vw' }}
                         onClick={(e) => e.stopPropagation()}
                         onTouchStart={onTouchStart}
                         onTouchMove={onTouchMove}
@@ -1088,12 +1087,11 @@
                             className="flex h-full items-center"
                             style={{
                                 transform: `translateX(calc(-${currentIndex * 100}% + ${isDragging ? dragOffset : 0}px))`,
-                                transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                                width: `${photos.length * 100}%`
+                                transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
                             }}
                         >
                             {photos.map((photo, index) => (
-                                <div key={index} className="w-full h-full flex-shrink-0 flex items-center justify-center">
+                                <div key={index} className="flex-shrink-0 flex items-center justify-center" style={{ width: '100%', height: '100%' }}>
                                     <img 
                                         src={photo} 
                                         alt={`Foto ${index + 1}`}
