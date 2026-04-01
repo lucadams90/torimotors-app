@@ -140,6 +140,92 @@
                 return () => unsubscribe();
             }, [user]);
 
+            // Weekly automatic backup
+            useEffect(() => {
+                if (!user) return;
+
+                const checkAndCreateBackup = async () => {
+                    const today = new Date();
+                    const dayOfWeek = today.getDay(); // 0 = Sunday
+                    
+                    // Only run on Sundays
+                    if (dayOfWeek !== 0) return;
+
+                    // Check if backup was already created today
+                    const lastBackupKey = 'lastBackupDate';
+                    const lastBackup = localStorage.getItem(lastBackupKey);
+                    const todayStr = today.toISOString().split('T')[0];
+
+                    if (lastBackup === todayStr) {
+                        console.log('Backup already created today');
+                        return;
+                    }
+
+                    try {
+                        console.log('Creating automatic weekly backup...');
+                        
+                        // Fetch all vehicles
+                        const snapshot = await db.collection('vehicles').get();
+                        const vehiclesData = snapshot.docs.map(doc => ({
+                            id: doc.id,
+                            ...doc.data()
+                        }));
+
+                        // Create backup object
+                        const backup = {
+                            timestamp: new Date().toISOString(),
+                            vehiclesCount: vehiclesData.length,
+                            vehicles: vehiclesData,
+                            automatic: true
+                        };
+
+                        // Generate filename
+                        const filename = `backup-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}.json`;
+
+                        // Upload to Firebase Storage
+                        const storageRef = storage.ref(`backups/${filename}`);
+                        await storageRef.putString(JSON.stringify(backup, null, 2), 'raw', {
+                            contentType: 'application/json'
+                        });
+
+                        // Clean old backups (keep only last 20)
+                        const MAX_BACKUPS = 20;
+                        const backupsRef = storage.ref('backups');
+                        const result = await backupsRef.listAll();
+                        
+                        if (result.items.length > MAX_BACKUPS) {
+                            const backupList = await Promise.all(
+                                result.items.map(async (item) => {
+                                    const metadata = await item.getMetadata();
+                                    return {
+                                        ref: item,
+                                        created: new Date(metadata.timeCreated)
+                                    };
+                                })
+                            );
+
+                            backupList.sort((a, b) => a.created - b.created);
+                            const toDelete = backupList.slice(0, backupList.length - MAX_BACKUPS);
+                            await Promise.all(toDelete.map(item => item.ref.delete()));
+                            console.log(`Cleaned ${toDelete.length} old backups`);
+                        }
+
+                        // Mark backup as created today
+                        localStorage.setItem(lastBackupKey, todayStr);
+                        console.log('Automatic weekly backup created successfully');
+                    } catch (error) {
+                        console.error('Error creating automatic backup:', error);
+                    }
+                };
+
+                // Check immediately on mount
+                checkAndCreateBackup();
+
+                // Check every hour (in case app stays open)
+                const interval = setInterval(checkAndCreateBackup, 60 * 60 * 1000);
+                return () => clearInterval(interval);
+            }, [user]);
+
             const addVehicle = async (vehicle) => {
                 try {
                     await db.collection('vehicles').add({
@@ -262,6 +348,10 @@
                                 <AnalisiMargini vehicles={vehicles} />
                             )}
 
+                            {currentView === 'impostazioni' && (
+                                <BackupSettings user={user} />
+                            )}
+
                             {selectedVehicle && !isEditing && (
                                 <VehicleDetail
                                     vehicle={selectedVehicle}
@@ -293,6 +383,247 @@
                                 />
                             )}
                         </main>
+                    </div>
+                </div>
+            );
+        }
+
+        // Backup Settings Component
+        function BackupSettings({ user }) {
+            const [backups, setBackups] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [creating, setCreating] = useState(false);
+
+            const MAX_BACKUPS = 20; // 5 months of weekly backups
+
+            // Load available backups
+            useEffect(() => {
+                loadBackups();
+            }, []);
+
+            const loadBackups = async () => {
+                try {
+                    const storageRef = storage.ref('backups');
+                    const result = await storageRef.listAll();
+                    
+                    const backupList = await Promise.all(
+                        result.items.map(async (item) => {
+                            const url = await item.getDownloadURL();
+                            const metadata = await item.getMetadata();
+                            return {
+                                name: item.name,
+                                url: url,
+                                size: metadata.size,
+                                created: metadata.timeCreated,
+                                fullPath: item.fullPath
+                            };
+                        })
+                    );
+
+                    // Sort by date, newest first
+                    backupList.sort((a, b) => new Date(b.created) - new Date(a.created));
+                    setBackups(backupList);
+                    setLoading(false);
+                } catch (error) {
+                    console.error('Error loading backups:', error);
+                    setLoading(false);
+                }
+            };
+
+            const createBackup = async () => {
+                setCreating(true);
+                try {
+                    // Fetch all vehicles data
+                    const snapshot = await db.collection('vehicles').get();
+                    const vehiclesData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+
+                    // Create backup object
+                    const backup = {
+                        timestamp: new Date().toISOString(),
+                        vehiclesCount: vehiclesData.length,
+                        vehicles: vehiclesData
+                    };
+
+                    // Generate filename
+                    const date = new Date();
+                    const filename = `backup-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}.json`;
+
+                    // Upload to Firebase Storage
+                    const storageRef = storage.ref(`backups/${filename}`);
+                    await storageRef.putString(JSON.stringify(backup, null, 2), 'raw', {
+                        contentType: 'application/json'
+                    });
+
+                    // Clean old backups (keep only last 20)
+                    await cleanOldBackups();
+
+                    alert('✅ Backup creato con successo!');
+                    loadBackups();
+                } catch (error) {
+                    console.error('Error creating backup:', error);
+                    alert('❌ Errore durante la creazione del backup: ' + error.message);
+                } finally {
+                    setCreating(false);
+                }
+            };
+
+            const cleanOldBackups = async () => {
+                try {
+                    const storageRef = storage.ref('backups');
+                    const result = await storageRef.listAll();
+                    
+                    if (result.items.length > MAX_BACKUPS) {
+                        // Get metadata for all backups
+                        const backupList = await Promise.all(
+                            result.items.map(async (item) => {
+                                const metadata = await item.getMetadata();
+                                return {
+                                    ref: item,
+                                    created: new Date(metadata.timeCreated)
+                                };
+                            })
+                        );
+
+                        // Sort by date, oldest first
+                        backupList.sort((a, b) => a.created - b.created);
+
+                        // Delete oldest backups
+                        const toDelete = backupList.slice(0, backupList.length - MAX_BACKUPS);
+                        await Promise.all(toDelete.map(item => item.ref.delete()));
+
+                        console.log(`Cleaned ${toDelete.length} old backups`);
+                    }
+                } catch (error) {
+                    console.error('Error cleaning old backups:', error);
+                }
+            };
+
+            const downloadBackup = (backup) => {
+                const link = document.createElement('a');
+                link.href = backup.url;
+                link.download = backup.name;
+                link.click();
+            };
+
+            const formatBytes = (bytes) => {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+            };
+
+            return (
+                <div className="p-6">
+                    <div className="max-w-4xl mx-auto">
+                        <div className="bg-white rounded-lg shadow-lg p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+                                        <i className="fas fa-cog mr-3 text-blue-600"></i>
+                                        Impostazioni e Backup
+                                    </h2>
+                                    <p className="text-gray-600 mt-1">Gestisci i backup dei tuoi dati</p>
+                                </div>
+                                <button
+                                    onClick={createBackup}
+                                    disabled={creating}
+                                    className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                                >
+                                    {creating ? (
+                                        <>
+                                            <i className="fas fa-spinner fa-spin mr-2"></i>
+                                            Creazione...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-plus-circle mr-2"></i>
+                                            Crea Backup Ora
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Info Box */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                <div className="flex items-start">
+                                    <i className="fas fa-info-circle text-blue-600 text-xl mr-3 mt-1"></i>
+                                    <div className="text-sm text-blue-800">
+                                        <p className="font-semibold mb-1">Sistema Backup Automatico</p>
+                                        <ul className="list-disc list-inside space-y-1 text-blue-700">
+                                            <li>Backup automatico ogni domenica</li>
+                                            <li>Conserva gli ultimi 20 backup (~5 mesi)</li>
+                                            <li>Cancellazione automatica dei backup più vecchi</li>
+                                            <li>I backup contengono tutti i dati delle auto e i link alle foto</li>
+                                            <li>Le foto rimangono sempre su Firebase Storage (non servono backup)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Backups List */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                                    <i className="fas fa-archive mr-2 text-gray-600"></i>
+                                    Backup Disponibili ({backups.length})
+                                </h3>
+
+                                {loading ? (
+                                    <div className="text-center py-12">
+                                        <i className="fas fa-spinner fa-spin text-4xl text-gray-400 mb-3"></i>
+                                        <p className="text-gray-500">Caricamento backup...</p>
+                                    </div>
+                                ) : backups.length === 0 ? (
+                                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                                        <i className="fas fa-database text-6xl text-gray-300 mb-4"></i>
+                                        <p className="text-gray-500 text-lg">Nessun backup disponibile</p>
+                                        <p className="text-gray-400 text-sm mt-2">Crea il tuo primo backup cliccando il pulsante qui sopra</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {backups.map((backup, index) => (
+                                            <div
+                                                key={backup.name}
+                                                className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                                            >
+                                                <div className="flex items-center space-x-4">
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                                        index === 0 ? 'bg-green-100' : 'bg-gray-200'
+                                                    }`}>
+                                                        <i className={`fas fa-file-archive ${
+                                                            index === 0 ? 'text-green-600' : 'text-gray-600'
+                                                        }`}></i>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-gray-800">
+                                                            {backup.name}
+                                                            {index === 0 && (
+                                                                <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                                                    Più recente
+                                                                </span>
+                                                            )}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {new Date(backup.created).toLocaleString('it-IT')} · {formatBytes(backup.size)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => downloadBackup(backup)}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                                                >
+                                                    <i className="fas fa-download mr-2"></i>
+                                                    Scarica
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             );
@@ -399,7 +730,8 @@
             const menuItems = [
                 { id: 'parco', icon: 'fa-warehouse', label: 'Parco Auto', badge: vehiclesCount },
                 { id: 'logistica', icon: 'fa-truck', label: 'Logistica/Trasporti' },
-                { id: 'analisi', icon: 'fa-chart-line', label: 'Analisi Margini' }
+                { id: 'analisi', icon: 'fa-chart-line', label: 'Analisi Margini' },
+                { id: 'impostazioni', icon: 'fa-cog', label: 'Impostazioni' }
             ];
 
             return (
