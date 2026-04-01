@@ -878,22 +878,31 @@
             const [currentIndex, setCurrentIndex] = useState(0);
             const [touchStart, setTouchStart] = useState(null);
             const [touchEnd, setTouchEnd] = useState(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState(0);
 
             const minSwipeDistance = 50;
 
             const onTouchStart = (e) => {
                 e.stopPropagation();
+                setIsDragging(true);
                 setTouchEnd(null);
                 setTouchStart(e.targetTouches[0].clientX);
             };
 
             const onTouchMove = (e) => {
                 e.stopPropagation();
-                setTouchEnd(e.targetTouches[0].clientX);
+                if (!touchStart) return;
+                const currentTouch = e.targetTouches[0].clientX;
+                setTouchEnd(currentTouch);
+                setDragOffset(currentTouch - touchStart);
             };
 
             const onTouchEnd = (e) => {
                 e.stopPropagation();
+                setIsDragging(false);
+                setDragOffset(0);
+                
                 if (!touchStart || !touchEnd) return;
                 
                 const distance = touchStart - touchEnd;
@@ -925,11 +934,25 @@
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
                 >
-                    <img 
-                        src={photos[currentIndex]} 
-                        alt={alt}
-                        className="w-full h-full object-cover"
-                    />
+                    <div 
+                        className="flex h-full"
+                        style={{
+                            transform: `translateX(calc(-${currentIndex * 100}% + ${isDragging ? dragOffset : 0}px))`,
+                            transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                            width: `${photos.length * 100}%`
+                        }}
+                    >
+                        {photos.map((photo, index) => (
+                            <div key={index} className="w-full h-full flex-shrink-0">
+                                <img 
+                                    src={photo} 
+                                    alt={`${alt} - ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    draggable="false"
+                                />
+                            </div>
+                        ))}
+                    </div>
                     
                     {photos.length > 1 && (
                         <>
@@ -980,6 +1003,8 @@
             const [currentIndex, setCurrentIndex] = useState(initialIndex);
             const [touchStart, setTouchStart] = useState(null);
             const [touchEnd, setTouchEnd] = useState(null);
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState(0);
 
             const minSwipeDistance = 50;
 
@@ -994,15 +1019,22 @@
             }, [currentIndex]);
 
             const onTouchStart = (e) => {
+                setIsDragging(true);
                 setTouchEnd(null);
                 setTouchStart(e.targetTouches[0].clientX);
             };
 
             const onTouchMove = (e) => {
-                setTouchEnd(e.targetTouches[0].clientX);
+                if (!touchStart) return;
+                const currentTouch = e.targetTouches[0].clientX;
+                setTouchEnd(currentTouch);
+                setDragOffset(currentTouch - touchStart);
             };
 
             const onTouchEnd = () => {
+                setIsDragging(false);
+                setDragOffset(0);
+                
                 if (!touchStart || !touchEnd) return;
                 
                 const distance = touchStart - touchEnd;
@@ -1043,19 +1075,34 @@
                         Foto {currentIndex + 1} di {photos.length}
                     </div>
 
-                    {/* Main Image */}
+                    {/* Main Image Container */}
                     <div 
-                        className="relative max-w-7xl max-h-[90vh] mx-auto px-4"
+                        className="relative w-full max-w-7xl mx-auto px-4 overflow-hidden"
+                        style={{ height: '90vh' }}
                         onClick={(e) => e.stopPropagation()}
                         onTouchStart={onTouchStart}
                         onTouchMove={onTouchMove}
                         onTouchEnd={onTouchEnd}
                     >
-                        <img 
-                            src={photos[currentIndex]} 
-                            alt={`Foto ${currentIndex + 1}`}
-                            className="max-w-full max-h-[90vh] object-contain"
-                        />
+                        <div 
+                            className="flex h-full items-center"
+                            style={{
+                                transform: `translateX(calc(-${currentIndex * 100}% + ${isDragging ? dragOffset : 0}px))`,
+                                transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                width: `${photos.length * 100}%`
+                            }}
+                        >
+                            {photos.map((photo, index) => (
+                                <div key={index} className="w-full h-full flex-shrink-0 flex items-center justify-center">
+                                    <img 
+                                        src={photo} 
+                                        alt={`Foto ${index + 1}`}
+                                        className="max-w-full max-h-full object-contain"
+                                        draggable="false"
+                                    />
+                                </div>
+                            ))}
+                        </div>
 
                         {/* Navigation Arrows */}
                         {currentIndex > 0 && (
@@ -3134,6 +3181,8 @@
             const [filterStatus, setFilterStatus] = useState('all');
             const [fuelFilter, setFuelFilter] = useState('all');
             const [maxPrice, setMaxPrice] = useState(100000);
+            const [lightboxOpen, setLightboxOpen] = useState(false);
+            const [lightboxIndex, setLightboxIndex] = useState(0);
 
             useEffect(() => {
                 // Fetch vehicles without authentication
@@ -3312,11 +3361,7 @@
                                     >
                                         {/* Vehicle Image */}
                                         {vehicle.photos && vehicle.photos.length > 0 ? (
-                                            <img
-                                                src={vehicle.photos[0]}
-                                                alt={`${vehicle.brand} ${vehicle.model}`}
-                                                className="w-full h-48 object-cover"
-                                            />
+                                            <PhotoCarousel photos={vehicle.photos} alt={`${vehicle.brand} ${vehicle.model}`} />
                                         ) : (
                                             <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
                                                 <i className="fas fa-car text-6xl text-gray-400"></i>
@@ -3414,7 +3459,8 @@
                                                         className="w-full h-48 object-cover rounded-lg shadow cursor-pointer hover:opacity-75"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(photo, '_blank');
+                                                            setLightboxIndex(index);
+                                                            setLightboxOpen(true);
                                                         }}
                                                     />
                                                 ))}
@@ -3475,6 +3521,15 @@
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {/* Photo Lightbox */}
+                    {lightboxOpen && selectedVehicle && selectedVehicle.photos && selectedVehicle.photos.length > 0 && (
+                        <PhotoLightbox 
+                            photos={selectedVehicle.photos} 
+                            initialIndex={lightboxIndex}
+                            onClose={() => setLightboxOpen(false)}
+                        />
                     )}
 
                     {/* Footer */}
