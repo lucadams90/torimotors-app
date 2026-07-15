@@ -85,6 +85,8 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
+        const VENDITORE_EMAIL = 'stile@maurobuccolo.com';
+
         function App() {
             const [user, setUser] = useState(null);
             const [loading, setLoading] = useState(true);
@@ -94,7 +96,12 @@
             const [isEditing, setIsEditing] = useState(false);
             const [searchQuery, setSearchQuery] = useState('');
             const [filterStatus, setFilterStatus] = useState('in-stock');
+            const [filterSede, setFilterSede] = useState('all');
             const [sidebarOpen, setSidebarOpen] = useState(false);
+
+            // Determine user role
+            const isVenditore = user && user.email === VENDITORE_EMAIL;
+            const isAdmin = user && !isVenditore;
 
             useEffect(() => {
                 const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -110,18 +117,25 @@
                     return;
                 }
 
-                const unsubscribe = db.collection('vehicles')
-                    .where('userId', '==', user.uid)
-                    .orderBy('createdAt', 'desc')
-                    .onSnapshot((snapshot) => {
-                        const vehiclesData = snapshot.docs.map(doc => ({
-                            id: doc.id,
-                            ...doc.data()
-                        }));
-                        setVehicles(vehiclesData);
-                    }, (error) => {
-                        console.error('Error loading vehicles:', error);
-                    });
+                // Admin: vede le sue auto; Venditore: vede tutte le auto
+                let query;
+                if (isVenditore) {
+                    query = db.collection('vehicles').orderBy('createdAt', 'desc');
+                } else {
+                    query = db.collection('vehicles')
+                        .where('userId', '==', user.uid)
+                        .orderBy('createdAt', 'desc');
+                }
+
+                const unsubscribe = query.onSnapshot((snapshot) => {
+                    const vehiclesData = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    setVehicles(vehiclesData);
+                }, (error) => {
+                    console.error('Error loading vehicles:', error);
+                });
 
                 return () => unsubscribe();
             }, [user]);
@@ -215,6 +229,7 @@
                         sidebarOpen={sidebarOpen}
                         setSidebarOpen={setSidebarOpen}
                         vehiclesCount={vehicles.length}
+                        isVenditore={isVenditore}
                     />
 
                     <div className="flex-1 flex flex-col overflow-hidden">
@@ -232,6 +247,9 @@
                                     setSearchQuery={setSearchQuery}
                                     filterStatus={filterStatus}
                                     setFilterStatus={setFilterStatus}
+                                    filterSede={filterSede}
+                                    setFilterSede={setFilterSede}
+                                    isVenditore={isVenditore}
                                     onSelectVehicle={setSelectedVehicle}
                                     onAddVehicle={() => {
                                         setSelectedVehicle(null);
@@ -241,10 +259,10 @@
                             )}
 
                             {currentView === 'logistica' && (
-                                <Logistica vehicles={vehicles} onSelectVehicle={setSelectedVehicle} />
+                                <Logistica vehicles={vehicles} onSelectVehicle={setSelectedVehicle} filterSede={filterSede} setFilterSede={setFilterSede} />
                             )}
 
-                            {currentView === 'analisi' && (
+                            {currentView === 'analisi' && !isVenditore && (
                                 <AnalisiMargini vehicles={vehicles} />
                             )}
 
@@ -253,16 +271,18 @@
                                     vehicle={selectedVehicle}
                                     onClose={() => setSelectedVehicle(null)}
                                     onEdit={() => setIsEditing(true)}
-                                    onDelete={deleteVehicle}
+                                    onDelete={isVenditore ? null : deleteVehicle}
                                     onAddExpense={addExpense}
                                     onDeleteExpense={deleteExpense}
                                     onUpdate={updateVehicle}
+                                    isVenditore={isVenditore}
                                 />
                             )}
 
                             {isEditing && (
                                 <VehicleForm
                                     vehicle={selectedVehicle}
+                                    isVenditore={isVenditore}
                                     onSave={async (vehicle) => {
                                         if (selectedVehicle) {
                                             await updateVehicle(selectedVehicle.id, vehicle);
@@ -381,12 +401,14 @@
             );
         }
 
-        function Sidebar({ currentView, setCurrentView, sidebarOpen, setSidebarOpen, vehiclesCount }) {
-            const menuItems = [
+        function Sidebar({ currentView, setCurrentView, sidebarOpen, setSidebarOpen, vehiclesCount, isVenditore }) {
+            const allMenuItems = [
                 { id: 'parco', icon: 'fa-warehouse', label: 'Parco Auto', badge: vehiclesCount },
                 { id: 'logistica', icon: 'fa-truck', label: 'Logistica/Trasporti' },
-                { id: 'analisi', icon: 'fa-chart-line', label: 'Analisi Margini' }
+                { id: 'analisi', icon: 'fa-chart-line', label: 'Analisi Margini', adminOnly: true },
+                { id: 'impostazioni', icon: 'fa-cog', label: 'Impostazioni', adminOnly: true }
             ];
+            const menuItems = allMenuItems.filter(item => !item.adminOnly || !isVenditore);
 
             return (
                 <>
@@ -490,7 +512,7 @@
 
         // Continue with ParcoAuto and other components in next message due to length...
         
-        function ParcoAuto({ vehicles, searchQuery, setSearchQuery, filterStatus, setFilterStatus, onSelectVehicle, onAddVehicle }) {
+        function ParcoAuto({ vehicles, searchQuery, setSearchQuery, filterStatus, setFilterStatus, filterSede, setFilterSede, isVenditore, onSelectVehicle, onAddVehicle }) {
             const [fuelFilter, setFuelFilter] = React.useState('all');
             const [maxPrice, setMaxPrice] = React.useState(50000);
             
@@ -504,7 +526,6 @@
                     (filterStatus === 'da-trasportare' && !v.transportOrdered && !v.inStock && !v.sold) ||
                     (filterStatus === 'in-stock' && v.inStock && !v.sold) ||
                     (filterStatus === 'in-arrivo' && v.transportOrdered && !v.delivered && !v.sold) ||
-                    (filterStatus === 'disponibili' && (v.delivered || v.inStock) && !v.sold) ||
                     (filterStatus === 'vendute' && v.sold);
 
                 const matchesFuel = fuelFilter === 'all' || v.fuelType === fuelFilter;
@@ -512,7 +533,9 @@
                 const salePrice = parseFloat(v.salePrice) || 0;
                 const matchesPrice = salePrice <= maxPrice;
 
-                return matchesSearch && matchesFilter && matchesFuel && matchesPrice;
+                const matchesSede = filterSede === 'all' || (v.sede || 'SEDE') === filterSede;
+
+                return matchesSearch && matchesFilter && matchesFuel && matchesPrice && matchesSede;
             });
 
             const calculateMargin = (v) => {
@@ -602,6 +625,27 @@
                             )}
                         </div>
                         
+                        {/* Filtro Sede */}
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { id: 'all', label: '🏢 Tutte le Sedi', count: vehicles.length },
+                                { id: 'SEDE', label: '🏢 SEDE', count: vehicles.filter(v => (v.sede || 'SEDE') === 'SEDE').length },
+                                { id: 'FILIALE', label: '🏬 FILIALE', count: vehicles.filter(v => v.sede === 'FILIALE').length }
+                            ].map(s => (
+                                <button
+                                    key={s.id}
+                                    onClick={() => setFilterSede(s.id)}
+                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                                        filterSede === s.id
+                                            ? 'bg-slate-700 text-white'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {s.label} ({s.count})
+                                </button>
+                            ))}
+                        </div>
+
                         <div className="flex flex-wrap gap-2">
                             {[
                                 { id: 'in-stock', label: 'In Stock', count: vehicles.filter(v => v.inStock && !v.sold).length },
@@ -652,8 +696,21 @@
                                         </div>
                                     )}
                                     <div className="bg-gradient-to-r from-slate-700 to-blue-800 text-white p-4">
-                                        <h3 className="font-bold text-xl mb-1">{vehicle.brand} {vehicle.model}</h3>
-                                        <p className="text-sm text-slate-200">{vehicle.plate}</p>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-xl mb-1">{vehicle.brand} {vehicle.model}
+                                                    {vehicle.year && <span className="ml-2 text-slate-300 text-base font-normal">({vehicle.year})</span>}
+                                                </h3>
+                                                <p className="text-sm text-slate-200">{vehicle.plate}</p>
+                                            </div>
+                                            <span className={`text-xs px-2 py-1 rounded-full font-semibold flex-shrink-0 ${
+                                                (vehicle.sede || 'SEDE') === 'SEDE' 
+                                                    ? 'bg-blue-500 text-white' 
+                                                    : 'bg-emerald-500 text-white'
+                                            }`}>
+                                                {(vehicle.sede || 'SEDE') === 'SEDE' ? '🏢 SEDE' : '🏬 FILIALE'}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="p-4 space-y-3">
                                         <div className="flex justify-between text-sm">
@@ -730,9 +787,8 @@
                                             )}
                                         </div>
                                         
-                                        {/* Financial Summary - Always visible on all cards */}
+                                        {/* Financial Summary */}
                                         <div className="pt-3 border-t bg-gradient-to-r from-slate-50 to-blue-50 -mx-4 -mb-4 p-4 mt-3">
-                                            <p className="text-xs font-semibold text-gray-500 mb-2">RIEPILOGO FINANZIARIO</p>
                                             <div className="space-y-2">
                                                 <div className="flex justify-between items-center py-2 bg-blue-50 -mx-4 px-4 border-y border-blue-200">
                                                     <span className="text-sm font-semibold text-gray-700">Prezzo Vendita:</span>
@@ -740,23 +796,27 @@
                                                         €{(parseFloat(vehicle.salePrice) || 0).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between text-sm pt-1">
-                                                    <span className="text-gray-600">Costo Totale:</span>
-                                                    <span className="font-semibold text-red-600">
-                                                        €{((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between items-center pt-1 border-t">
-                                                    <span className="text-sm font-semibold text-gray-700">Margine:</span>
-                                                    <div className="text-right">
-                                                        <span className={`font-bold text-base ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            €{calculateMargin(vehicle).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
-                                                        </span>
-                                                        <p className={`text-xs ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                            ({((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) > 0 ? (calculateMargin(vehicle) / ((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) * 100).toFixed(1) : 0}%)
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                {!isVenditore && (
+                                                    <>
+                                                        <div className="flex justify-between text-sm pt-1">
+                                                            <span className="text-gray-600">Costo Totale:</span>
+                                                            <span className="font-semibold text-red-600">
+                                                                €{((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center pt-1 border-t">
+                                                            <span className="text-sm font-semibold text-gray-700">Margine:</span>
+                                                            <div className="text-right">
+                                                                <span className={`font-bold text-base ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    €{calculateMargin(vehicle).toLocaleString('it-IT', { minimumFractionDigits: 0 })}
+                                                                </span>
+                                                                <p className={`text-xs ${calculateMargin(vehicle) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                                    ({((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) > 0 ? (calculateMargin(vehicle) / ((parseFloat(vehicle.purchasePrice) || 0) + ((vehicle.expenses || []).reduce((sum, e) => sum + (parseFloat(e.cost) || 0), 0))) * 100).toFixed(1) : 0}%)
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -769,17 +829,21 @@
         }
 
         // VehicleForm with receipt generation capability
-        function VehicleForm({ vehicle, onSave, onCancel }) {
+        function VehicleForm({ vehicle, onSave, onCancel, userRole }) {
             const [formData, setFormData] = useState(vehicle || {
                 brand: '',
                 model: '',
                 plate: '',
                 vin: '',
+                year: '',
+                yearMezzo: '',
                 km: '',
                 fuelType: 'benzina',
                 taxRegime: 'margine',
                 purchasePrice: '',
                 salePrice: '',
+                tradePrice: '',
+                sede: 'SEDE',
                 inStock: false,
                 transportOrdered: false,
                 transportRequestDate: '',
@@ -971,6 +1035,45 @@
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                         required
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Anno Immatricolazione *</label>
+                                    <select
+                                        value={formData.year || ''}
+                                        onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
+                                        required
+                                    >
+                                        <option value="">Seleziona anno...</option>
+                                        {Array.from({ length: new Date().getFullYear() - 1950 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Anno di Mezzo</label>
+                                    <select
+                                        value={formData.yearMezzo || ''}
+                                        onChange={(e) => setFormData({ ...formData, yearMezzo: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
+                                    >
+                                        <option value="">Seleziona anno...</option>
+                                        {Array.from({ length: new Date().getFullYear() - 1950 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">🏢 Sede *</label>
+                                    <select
+                                        value={formData.sede || 'SEDE'}
+                                        onChange={(e) => setFormData({ ...formData, sede: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
+                                        required
+                                    >
+                                        <option value="SEDE">🏢 SEDE</option>
+                                        <option value="FILIALE">🏬 FILIALE</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">Alimentazione *</label>
@@ -1186,7 +1289,7 @@
         }
 
         // Continue with VehicleDetail component...
-        function VehicleDetail({ vehicle, onClose, onEdit, onDelete, onAddExpense, onDeleteExpense, onUpdate }) {
+        function VehicleDetail({ vehicle, onClose, onEdit, onDelete, onAddExpense, onDeleteExpense, onUpdate, isVenditore }) {
             const [showExpenseForm, setShowExpenseForm] = useState(false);
             const [editingExpense, setEditingExpense] = useState(null);
             const [newExpense, setNewExpense] = useState({ 
@@ -1369,15 +1472,19 @@
                                 <button onClick={onEdit} className="bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap">
                                     <i className="fas fa-edit mr-1 sm:mr-2"></i>Modifica
                                 </button>
-                                <button onClick={() => onDelete(vehicle.id)} className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap">
-                                    <i className="fas fa-trash mr-1 sm:mr-2"></i>Elimina
-                                </button>
-                                <button
-                                    onClick={() => setShowReceiptModal(true)}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
-                                >
-                                    <i className="fas fa-file-invoice mr-1 sm:mr-2"></i>Ricevuta
-                                </button>
+                                {!isVenditore && (
+                                    <button onClick={() => onDelete(vehicle.id)} className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap">
+                                        <i className="fas fa-trash mr-1 sm:mr-2"></i>Elimina
+                                    </button>
+                                )}
+                                {!isVenditore && (
+                                    <button
+                                        onClick={() => setShowReceiptModal(true)}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base whitespace-nowrap"
+                                    >
+                                        <i className="fas fa-file-invoice mr-1 sm:mr-2"></i>Ricevuta
+                                    </button>
+                                )}
                                 {!vehicle.inStock && (
                                     <button
                                         onClick={() => onUpdate(vehicle.id, { inStock: true, transportOrdered: false, delivered: false })}
@@ -1693,6 +1800,7 @@
                                 </div>
                             </div>
 
+                            {!isVenditore && (
                             <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-lg p-6 border border-blue-200">
                                 <h3 className="font-bold text-lg mb-4"><i className="fas fa-calculator mr-2 text-blue-600"></i>Riepilogo Finanziario</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1729,6 +1837,7 @@
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             <div className="border-t pt-6">
                                 <div className="flex justify-between items-center mb-4 gap-2">
@@ -1987,6 +2096,7 @@
         function AnalisiMargini({ vehicles }) {
             const [selectedYear, setSelectedYear] = useState('all');
             const [selectedMonth, setSelectedMonth] = useState('all');
+            const [selectedSede, setSelectedSede] = useState('all');
 
             const allSoldVehicles = vehicles.filter(v => v.sold);
 
@@ -1996,8 +2106,9 @@
                 .map(v => new Date(v.saleDate).getFullYear())
             )].sort((a, b) => b - a);
 
-            // Filter sold vehicles by year/month
+            // Filter sold vehicles by year/month/sede
             const soldVehicles = allSoldVehicles.filter(v => {
+                if (selectedSede !== 'all' && (v.sede || 'SEDE') !== selectedSede) return false;
                 if (selectedYear === 'all') return true;
                 if (!v.saleDate) return false;
                 const date = new Date(v.saleDate);
@@ -2028,9 +2139,23 @@
                         Analisi Margini
                     </h1>
 
-                    {/* Filtri Anno/Mese */}
+                    {/* Filtri Anno/Mese/Sede */}
                     <div className="bg-white rounded-lg shadow p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <i className="fas fa-building mr-2 text-blue-600"></i>Sede
+                                </label>
+                                <select
+                                    value={selectedSede}
+                                    onChange={(e) => setSelectedSede(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="all">🏢 Tutte le Sedi</option>
+                                    <option value="SEDE">🏢 SEDE</option>
+                                    <option value="FILIALE">🏬 FILIALE</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <i className="fas fa-calendar-alt mr-2 text-blue-600"></i>Anno
@@ -2063,9 +2188,9 @@
                                 </select>
                             </div>
                         </div>
-                        {(selectedYear !== 'all' || selectedMonth !== 'all') && (
+                        {(selectedYear !== 'all' || selectedMonth !== 'all' || selectedSede !== 'all') && (
                             <button
-                                onClick={() => { setSelectedYear('all'); setSelectedMonth('all'); }}
+                                onClick={() => { setSelectedYear('all'); setSelectedMonth('all'); setSelectedSede('all'); }}
                                 className="mt-3 w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
                             >
                                 <i className="fas fa-times-circle mr-2"></i>Cancella filtri
@@ -2101,6 +2226,7 @@
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Veicolo</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sede</th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acquisto</th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Spese</th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Costo Tot.</th>
@@ -2115,6 +2241,13 @@
                                                 <td className="px-6 py-4">
                                                     <p className="font-semibold">{v.brand} {v.model}</p>
                                                     <p className="text-sm text-gray-500">{v.plate}</p>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                                                        (v.sede || 'SEDE') === 'SEDE' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                                                    }`}>
+                                                        {(v.sede || 'SEDE') === 'SEDE' ? '🏢 SEDE' : '🏬 FILIALE'}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">€{parseFloat(v.purchasePrice || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}</td>
                                                 <td className="px-6 py-4 text-right text-orange-600">€{v.expenses.toLocaleString('it-IT', { minimumFractionDigits: 2 })}</td>
