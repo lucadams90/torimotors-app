@@ -632,9 +632,9 @@
                         {/* Filtro Sede */}
                         <div className="flex flex-wrap gap-2">
                             {[
-                                { id: 'all', label: '🏢 Tutte le Sedi', count: vehicles.filter(v => !v.sold).length },
-                                { id: 'SEDE', label: '🏢 SEDE', count: vehicles.filter(v => (v.sede || 'SEDE') === 'SEDE' && !v.sold).length },
-                                { id: 'FILIALE', label: '🏬 FILIALE', count: vehicles.filter(v => v.sede === 'FILIALE' && !v.sold).length }
+                                { id: 'SEDE', label: '🏢 SEDE', count: vehicles.filter(v => (v.sede || 'SEDE') === 'SEDE' && v.inStock && !v.sold).length },
+                                { id: 'FILIALE', label: '🏬 FILIALE', count: vehicles.filter(v => v.sede === 'FILIALE' && v.inStock && !v.sold).length },
+                                { id: 'all', label: '🏢 Tutte le Sedi', count: vehicles.filter(v => v.inStock && !v.sold).length }
                             ].map(s => (
                                 <button
                                     key={s.id}
