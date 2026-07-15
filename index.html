@@ -117,11 +117,15 @@
                     return;
                 }
 
-                // Admin: vede le sue auto; Venditore: vede tutte le auto
+                // Controlla email direttamente per evitare problemi di timing
+                const userIsVenditore = user.email === VENDITORE_EMAIL;
+
                 let query;
-                if (isVenditore) {
+                if (userIsVenditore) {
+                    // Venditore vede TUTTE le auto (senza filtro userId)
                     query = db.collection('vehicles').orderBy('createdAt', 'desc');
                 } else {
+                    // Admin vede solo le sue auto
                     query = db.collection('vehicles')
                         .where('userId', '==', user.uid)
                         .orderBy('createdAt', 'desc');
@@ -628,9 +632,9 @@
                         {/* Filtro Sede */}
                         <div className="flex flex-wrap gap-2">
                             {[
-                                { id: 'all', label: '🏢 Tutte le Sedi', count: vehicles.length },
-                                { id: 'SEDE', label: '🏢 SEDE', count: vehicles.filter(v => (v.sede || 'SEDE') === 'SEDE').length },
-                                { id: 'FILIALE', label: '🏬 FILIALE', count: vehicles.filter(v => v.sede === 'FILIALE').length }
+                                { id: 'all', label: '🏢 Tutte le Sedi', count: vehicles.filter(v => !v.sold).length },
+                                { id: 'SEDE', label: '🏢 SEDE', count: vehicles.filter(v => (v.sede || 'SEDE') === 'SEDE' && !v.sold).length },
+                                { id: 'FILIALE', label: '🏬 FILIALE', count: vehicles.filter(v => v.sede === 'FILIALE' && !v.sold).length }
                             ].map(s => (
                                 <button
                                     key={s.id}
