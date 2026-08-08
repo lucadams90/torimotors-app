@@ -1055,19 +1055,6 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Anno di Mezzo</label>
-                                    <select
-                                        value={formData.yearMezzo || ''}
-                                        onChange={(e) => setFormData({ ...formData, yearMezzo: e.target.value })}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-[42px]"
-                                    >
-                                        <option value="">Seleziona anno...</option>
-                                        {Array.from({ length: new Date().getFullYear() - 1950 + 1 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                                            <option key={y} value={y}>{y}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">🏢 Sede *</label>
                                     <select
                                         value={formData.sede || 'SEDE'}
@@ -2104,18 +2091,26 @@
 
             const allSoldVehicles = vehicles.filter(v => v.sold);
 
+            // Helper per ottenere la data di vendita
+            const getSaleDate = (v) => {
+                if (v.saleDate) return new Date(v.saleDate);
+                if (v.createdAt?.seconds) return new Date(v.createdAt.seconds * 1000);
+                return null;
+            };
+
             // Get unique years from sold vehicles
             const years = [...new Set(allSoldVehicles
-                .filter(v => v.saleDate)
-                .map(v => new Date(v.saleDate).getFullYear())
+                .map(v => getSaleDate(v))
+                .filter(d => d !== null)
+                .map(d => d.getFullYear())
             )].sort((a, b) => b - a);
 
             // Filter sold vehicles by year/month/sede
             const soldVehicles = allSoldVehicles.filter(v => {
                 if (selectedSede !== 'all' && (v.sede || 'SEDE') !== selectedSede) return false;
                 if (selectedYear === 'all') return true;
-                if (!v.saleDate) return false;
-                const date = new Date(v.saleDate);
+                const date = getSaleDate(v);
+                if (!date) return false;
                 if (date.getFullYear() !== parseInt(selectedYear)) return false;
                 if (selectedMonth !== 'all' && date.getMonth() !== parseInt(selectedMonth)) return false;
                 return true;
