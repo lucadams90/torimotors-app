@@ -955,7 +955,12 @@
 
             const handleSubmit = (e) => {
                 e.preventDefault();
-                onSave(formData);
+                const dataToSave = { ...formData };
+                // Se viene marcata come venduta ora, salva la data di vendita
+                if (dataToSave.sold && !vehicle?.sold && !dataToSave.saleDate) {
+                    dataToSave.saleDate = new Date().toISOString().split('T')[0];
+                }
+                onSave(dataToSave);
             };
 
             return (
@@ -1175,7 +1180,11 @@
                                         <input
                                             type="checkbox"
                                             checked={formData.sold}
-                                            onChange={(e) => setFormData({ ...formData, sold: e.target.checked })}
+                                            onChange={(e) => setFormData({ 
+                                                ...formData, 
+                                                sold: e.target.checked,
+                                                saleDate: e.target.checked && !formData.saleDate ? new Date().toISOString().split('T')[0] : formData.saleDate
+                                            })}
                                             className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                                         />
                                         <div>
@@ -1183,6 +1192,17 @@
                                             <span className="text-xs text-gray-500">L'auto è stata venduta a un cliente</span>
                                         </div>
                                     </label>
+                                    {formData.sold && (
+                                        <div className="ml-8 p-3 bg-blue-50 border-l-4 border-blue-500">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">📅 Data Vendita</label>
+                                            <input
+                                                type="date"
+                                                value={formData.saleDate || ''}
+                                                onChange={(e) => setFormData({ ...formData, saleDate: e.target.value })}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
